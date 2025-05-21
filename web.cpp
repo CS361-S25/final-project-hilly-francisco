@@ -7,8 +7,8 @@
 #include "emp/web/web.hpp"
 #include "World.h"
 #include "Org.h"
-#include "Deer.h"
-#include "Wolf.h"
+#include "KFC.h"
+#include "Predator.h"
 
 emp::web::Document doc{"target"};
 
@@ -26,8 +26,8 @@ class AEAnimator : public emp::web::Animate
     const double width{num_w_boxes * RECT_SIDE};
     const double height{num_h_boxes * RECT_SIDE};
 
-    const int num_of_deer = 12;
-    const int num_of_wolf = 4;
+    const int num_of_KFC = 12;
+    const int num_of_Predator = 4;
 
     emp::web::Canvas canvas{width, height, "canvas"};
 
@@ -63,7 +63,7 @@ public:
     /*
         Input: Void
         Output: Void
-        Purpose: Iterates through grid and draws squares for Deer, Wolf, and NULL organisms
+        Purpose: Iterates through grid and draws squares for KFC, Predator, and NULL organisms
     */
     void DrawSquares()
     {
@@ -75,11 +75,11 @@ public:
                 if (world.IsOccupied(org_num))
                 {
                     std::string species = world[org_num].SpeciesName();
-                    if (species == "Deer")
+                    if (species == "KFC")
                     {
                         canvas.Rect(x * RECT_SIDE, y * RECT_SIDE, RECT_SIDE, RECT_SIDE, "blue", "black");
                     }
-                    if (species == "Wolf")
+                    if (species == "Predator")
                     {
                         canvas.Rect(x * RECT_SIDE, y * RECT_SIDE, RECT_SIDE, RECT_SIDE, "red", "black");
                     }
@@ -100,35 +100,35 @@ public:
     */
     void AddOrgs()
     {
-        CreateandAddDeer(random_gen_2, num_of_deer);
-        CreateandAddWolf(random_gen_2, num_of_wolf);
+        CreateandAddKFC(random_gen_2, num_of_KFC);
+        CreateandAddPredator(random_gen_2, num_of_Predator);
     }
 
     /*
         Input: Void
         Output: Void
-        Purpose: Creates and adds a deer type organism to world
+        Purpose: Creates and adds a KFC type organism to world
     */
-    void CreateandAddDeer(emp::Random &ran, int num)
+    void CreateandAddKFC(emp::Random &ran, int num)
     {
         for (int i = 0; i < num; i++)
         {
-            Deer *deer_org = new Deer(&random_gen_2, 400);
-            world.AddOrgAt(deer_org, ran.GetInt(0, world.GetSize()));
+            KFC *KFC_org = new KFC(&random_gen_2, 400);
+            world.AddOrgAt(KFC_org, ran.GetInt(0, world.GetSize()));
         }
     }
 
     /*
         Input: Void
         Output: Void
-        Purpose: Creates and adds a wolf type organism to world
+        Purpose: Creates and adds a Predator type organism to world
     */
-    void CreateandAddWolf(emp::Random &ran, int num)
+    void CreateandAddPredator(emp::Random &ran, int num)
     {
         for (int i = 0; i < num; i++)
         {
-            Wolf *wolf_org = new Wolf(&random_gen_2, 800);
-            world.AddOrgAt(wolf_org, ran.GetInt(0, world.GetSize()));
+            Predator *Predator_org = new Predator(&random_gen_2, 800);
+            world.AddOrgAt(Predator_org, ran.GetInt(0, world.GetSize()));
         }
     }
 };
