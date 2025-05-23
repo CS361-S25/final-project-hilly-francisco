@@ -36,6 +36,16 @@ public:
         // Calls the process function for each organism
         CallProcesses(schedule1, pointsPerUpdate);
 
+        // Method for vision check, maybe be in org, but we'll see
+        for (int cellSpot : schedule1){
+
+            // Working only with cells that have an organism
+            if (IsOccupied(cellSpot)){
+                // Call function to check cells in hardcoded areas
+                checkVisibleArea(cellSpot);
+            }
+        }
+
         // Checks conditions for reproduction and lets organisms move
         for (int i : schedule2)
         {
@@ -169,6 +179,54 @@ public:
             {
                 AddOrgAt(extracted_org, pos);
             }
+        }
+    }
+
+    /*
+        Input: Integer
+        Output: Void
+        Purpose: Checks an organisms visible area in front of it
+    */
+    void checkVisibleArea(int cellSpot){
+        // We want to check a cell spot
+        int heightOfVision = 2;
+        int widthOfVision = 3;
+
+        for (int i = 0; i < heightOfVision; i++){
+            for (int j = 0; j < widthOfVision; i++){
+                
+            }
+            widthOfVision = widthOfVision--;
+        }
+
+        // Direction (front) = North
+
+        // Directly in front (- #width of grid)
+
+        // Directly in front to the right (- #widthOfGrid + 1)
+
+        // Directly in front to the left (- #widthOfGrid - 1)
+
+        // Two spots directly in front (2 * (- #widthOfGrid))
+
+        // Two spots directly in front to the left (2 * (- #widthOfGrid) - 1)
+
+        // Two spots directly in front to the right (2 * (- #widthOfGrid) + 1)
+        int visionDepth = 0;
+    }
+
+    void getToroidalBound(int cellSpot, int visionDepth){
+        if (cellSpot < 0) {
+            cellSpot = (visionDepth - 1);
+        }
+        if (y_neighbor > (num_h_boxes - 1)) {
+            y_neighbor = 0;
+        }
+        if (x_neighbor < 0) {
+            x_neighbor = (num_w_boxes - 1);
+        }
+        if (x_neighbor > (num_w_boxes - 1)){
+            x_neighbor = 0;
         }
     }
 };
