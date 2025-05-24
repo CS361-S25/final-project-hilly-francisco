@@ -43,24 +43,6 @@ public:
     }
 
     /*
-        Input: a vector of prey organisms to eat, a random
-        Output: emp::Ptr<Organism>
-        Purpose: Removes a prey from the world once a wolf has attacked it
-    */
-    emp::Ptr<Organism> Attack(emp::vector<emp::Ptr<Organism>> prey, emp::Random &random)
-    {
-        // Pick a random prey in the vector to return
-
-        emp::vector<size_t> schedule = emp::GetPermutation(random, prey.size());
-
-        for (int i : schedule)
-        {
-            emp::Ptr<Organism> return_prey = prey[i];
-            return return_prey;
-        }
-    }
-
-    /*
     Input: Void
     Output: emp::Ptr<Organism>
     Purpose: Checks if organism meets reproduction requirements, returns
