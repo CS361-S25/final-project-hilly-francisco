@@ -84,7 +84,8 @@ public:
         points += given_points;
         if (hasEaten == false)
         {
-            points -= 15;
+            //points -= 15;
+            points -= 0;
         }
     }
 };

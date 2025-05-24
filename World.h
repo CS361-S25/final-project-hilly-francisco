@@ -68,7 +68,7 @@ public:
                 }
 
                 // Move non-grass organisms to random neighboring position, if occupied check if can be eaten
-                if (!IsOccupied(i))
+                if (pop[i]->SpeciesName() != "Predator")
                 {
                     MoveOrg(i);
                 }
