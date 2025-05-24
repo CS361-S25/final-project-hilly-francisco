@@ -20,9 +20,9 @@ class AEAnimator : public emp::web::Animate
 {
 
     // arena width and height
-    const int num_h_boxes = 50;
-    const int num_w_boxes = 50;
-    const double RECT_SIDE = 10;
+    const int num_h_boxes = 10;
+    const int num_w_boxes = 10;
+    const double RECT_SIDE = 25;
     const double width{num_w_boxes * RECT_SIDE};
     const double height{num_h_boxes * RECT_SIDE};
 
