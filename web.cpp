@@ -26,7 +26,7 @@ class AEAnimator : public emp::web::Animate
     const double width{num_w_boxes * RECT_SIDE};
     const double height{num_h_boxes * RECT_SIDE};
 
-    const int num_of_KFC = 0;
+    const int num_of_KFC = 100;
     const int num_of_Predator = 1;
 
     emp::web::Canvas canvas{width, height, "canvas"};

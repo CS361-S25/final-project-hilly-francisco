@@ -45,7 +45,8 @@ public:
             // Working only with cells that have an organism
             if (IsOccupied(cellSpot)){
                 // Call function to check cells in hardcoded areas
-                checkVisibleArea(cellSpot);
+                if (pop[cellSpot]->SpeciesName() == "Predator"){
+                checkVisibleArea(cellSpot);}
             }
         }
 
@@ -63,7 +64,7 @@ public:
                 }
 
                 // Move non-grass organisms to random neighboring position, if occupied check if can be eaten
-                if (pop[i]->SpeciesName() != "Grass")
+                if (!IsOccupied(i))
                 {
                     MoveOrg(i);
                 }
@@ -192,10 +193,10 @@ public:
     */
     void checkVisibleArea(int cellSpot){
         // Must always be pos
-        int heightOfVision = 2;
+        int heightOfVision = 3;
 
         // Must be pos and odd (clean pyramids that way)
-        int widthOfVision = 3;
+        int widthOfVision = 5;
 
         // Dumb Math
         int numberOfSpots = (heightOfVision * widthOfVision) - heightOfVision * (heightOfVision - 1);
