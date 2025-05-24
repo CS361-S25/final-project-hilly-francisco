@@ -271,5 +271,22 @@ public:
         int adjustedSpot = y * (grid_w_boxes + x);
         return adjustedSpot;
     }
+
+    int GetToroidalDistance(int idx1, int idx2) {
+    int x1 = idx1 % grid_w_boxes;
+    int y1 = idx1 / grid_w_boxes;
+    int x2 = idx2 % grid_w_boxes;
+    int y2 = idx2 / grid_w_boxes;
+
+    int dx = std::abs(x1 - x2);
+    int dy = std::abs(y1 - y2);
+
+    // Wrap distances
+    dx = std::min(dx, grid_w_boxes - dx);
+    dy = std::min(dy, grid_h_boxes - dy);
+
+    return dx + dy; // Manhattan distance
+}
+
 };
 #endif
