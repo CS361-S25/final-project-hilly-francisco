@@ -14,8 +14,8 @@ class OrgWorld : public emp::World<Organism>
     emp::Ptr<emp::Random> random_ptr;
 
 public:
-    int grid_w_boxes = 50;
-    int grid_h_boxes = 50;
+    int grid_w_boxes = 10;
+    int grid_h_boxes = 10;
 
     OrgWorld(emp::Random &_random) : emp::World<Organism>(_random), random(_random)
     {
@@ -40,13 +40,17 @@ public:
         CallProcesses(schedule1, pointsPerUpdate);
 
         // Method for vision check, maybe be in org, but we'll see
-        for (int cellSpot : schedule1){
+        for (int cellSpot : schedule1)
+        {
 
             // Working only with cells that have an organism
-            if (IsOccupied(cellSpot)){
+            if (IsOccupied(cellSpot))
+            {
                 // Call function to check cells in hardcoded areas
-                if (pop[cellSpot]->SpeciesName() == "Predator"){
-                checkVisibleArea(cellSpot);}
+                if (pop[cellSpot]->SpeciesName() == "Predator")
+                {
+                    checkVisibleArea(cellSpot);
+                }
             }
         }
 
@@ -191,7 +195,8 @@ public:
         Output: Void
         Purpose: Checks an organisms visible area in front of it (Only N rn)
     */
-    void checkVisibleArea(int cellSpot){
+    void checkVisibleArea(int cellSpot)
+    {
         // Must always be pos
         int heightOfVision = 3;
 
@@ -201,12 +206,13 @@ public:
         // Dumb Math
         int numberOfSpots = (heightOfVision * widthOfVision) - heightOfVision * (heightOfVision - 1);
 
-        std::cout << "cell spot " << ": " << cellSpot<< std::endl;
+        std::cout << "cell spot " << ": " << cellSpot << std::endl;
 
         // Store spots into this for easy org check
         emp::vector<size_t> visibleSpots;
-        
-        for (int h = 0; h < heightOfVision; h++) {
+
+        for (int h = 0; h < heightOfVision; h++)
+        {
             // How many cells to left/right at this cur depth
             int curWidth = widthOfVision - (2 * h);
             int half = curWidth / 2;
@@ -214,7 +220,8 @@ public:
             // go north by h rows
             int basePos = cellSpot - ((h + 1) * grid_w_boxes);
 
-            for (int leftAndRightCount = -half; leftAndRightCount <= half; leftAndRightCount++) {
+            for (int leftAndRightCount = -half; leftAndRightCount <= half; leftAndRightCount++)
+            {
                 int target = basePos + leftAndRightCount;
 
                 // Toroidal wrap function call to ensure...well toroidal wrapping
@@ -226,6 +233,7 @@ public:
             }
         }
         getVisibleOrganismCount(visibleSpots);
+        Attack(visibleSpots);
         return;
     }
 
@@ -234,11 +242,14 @@ public:
         Output: Int
         Purpose: Returns the number of visible organism in specified visible area
     */
-    int getVisibleOrganismCount(emp::vector<size_t> visibleSpots){
+    int getVisibleOrganismCount(emp::vector<size_t> visibleSpots)
+    {
         int countOfOrgs = 0;
-        for (int spot : visibleSpots){
+        for (int spot : visibleSpots)
+        {
             std::cout << "spot: " << spot << std::endl;
-            if(IsOccupied(spot)){
+            if (IsOccupied(spot))
+            {
                 countOfOrgs++;
             }
         }
@@ -246,24 +257,52 @@ public:
         return countOfOrgs;
     }
 
-    int getToroidalBound(int cellCheck) {
+    void Attack(const emp::vector<size_t> &visibleSpots)
+    {
+        emp::vector<size_t> targets;
+        for (size_t spot : visibleSpots)
+        {
+            if (IsOccupied(spot))
+            {
+                targets.push_back(spot);
+            }
+        }
+
+        if (!targets.empty())
+        {
+            size_t chosen = random.GetUInt(targets.size());
+            std::cout << "Deleting organism at: " << targets[chosen] << std::endl;
+            DeleteOrganism(targets[chosen]);
+        }
+        else
+        {
+            std::cout << "No target available to attack." << std::endl;
+        }
+    }
+
+    int getToroidalBound(int cellCheck)
+    {
         // Convert the cur 1D index into simulated/fake 2D coords
         int x = cellCheck % grid_w_boxes; // column
         int y = cellCheck / grid_w_boxes; // row
 
         // Toroidal wrap on the x-axis (columns)
-        if (x < 0) {
+        if (x < 0)
+        {
             x += grid_w_boxes;
-        } 
-        else if (x >= grid_w_boxes) {
+        }
+        else if (x >= grid_w_boxes)
+        {
             x -= grid_w_boxes;
         }
 
         // Toroidal wrap on the y-axis (rows)
-        if (y < 0) {
+        if (y < 0)
+        {
             y += grid_h_boxes;
-        } 
-        else if (y >= grid_h_boxes) {
+        }
+        else if (y >= grid_h_boxes)
+        {
             y -= grid_h_boxes;
         }
 
@@ -272,21 +311,21 @@ public:
         return adjustedSpot;
     }
 
-    int GetToroidalDistance(int idx1, int idx2) {
-    int x1 = idx1 % grid_w_boxes;
-    int y1 = idx1 / grid_w_boxes;
-    int x2 = idx2 % grid_w_boxes;
-    int y2 = idx2 / grid_w_boxes;
+    int GetToroidalDistance(int idx1, int idx2)
+    {
+        int x1 = idx1 % grid_w_boxes;
+        int y1 = idx1 / grid_w_boxes;
+        int x2 = idx2 % grid_w_boxes;
+        int y2 = idx2 / grid_w_boxes;
 
-    int dx = std::abs(x1 - x2);
-    int dy = std::abs(y1 - y2);
+        int dx = std::abs(x1 - x2);
+        int dy = std::abs(y1 - y2);
 
-    // Wrap distances
-    dx = std::min(dx, grid_w_boxes - dx);
-    dy = std::min(dy, grid_h_boxes - dy);
+        // Wrap distances
+        dx = std::min(dx, grid_w_boxes - dx);
+        dy = std::min(dy, grid_h_boxes - dy);
 
-    return dx + dy; // Manhattan distance
-}
-
+        return dx + dy; // Manhattan distance
+    }
 };
 #endif
