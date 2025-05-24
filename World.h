@@ -14,6 +14,9 @@ class OrgWorld : public emp::World<Organism>
     emp::Ptr<emp::Random> random_ptr;
 
 public:
+    int grid_w_boxes = 50;
+    int grid_h_boxes = 50;
+
     OrgWorld(emp::Random &_random) : emp::World<Organism>(_random), random(_random)
     {
         random_ptr.New(_random);
@@ -185,49 +188,87 @@ public:
     /*
         Input: Integer
         Output: Void
-        Purpose: Checks an organisms visible area in front of it
+        Purpose: Checks an organisms visible area in front of it (Only N rn)
     */
     void checkVisibleArea(int cellSpot){
-        // We want to check a cell spot
+        // Must always be pos
         int heightOfVision = 2;
+
+        // Must be pos and odd (clean pyramids that way)
         int widthOfVision = 3;
 
-        for (int i = 0; i < heightOfVision; i++){
-            for (int j = 0; j < widthOfVision; i++){
-                
+        // Dumb Math
+        int numberOfSpots = (heightOfVision * widthOfVision) - heightOfVision * (heightOfVision - 1);
+
+        std::cout << "cell spot " << ": " << cellSpot<< std::endl;
+
+        // Store spots into this for easy org check
+        emp::vector<size_t> visibleSpots;
+        
+        for (int h = 0; h < heightOfVision; h++) {
+            // How many cells to left/right at this cur depth
+            int curWidth = widthOfVision - (2 * h);
+            int half = curWidth / 2;
+
+            // go north by h rows
+            int basePos = cellSpot - ((h + 1) * grid_w_boxes);
+
+            for (int leftAndRightCount = -half; leftAndRightCount <= half; leftAndRightCount++) {
+                int target = basePos + leftAndRightCount;
+
+                // Toroidal wrap function call to ensure...well toroidal wrapping
+                target = getToroidalBound(target);
+
+                visibleSpots.push_back(target);
+
+                std::cout << "Visible spot at depth " << h << ": " << target << std::endl;
             }
-            widthOfVision = widthOfVision--;
         }
-
-        // Direction (front) = North
-
-        // Directly in front (- #width of grid)
-
-        // Directly in front to the right (- #widthOfGrid + 1)
-
-        // Directly in front to the left (- #widthOfGrid - 1)
-
-        // Two spots directly in front (2 * (- #widthOfGrid))
-
-        // Two spots directly in front to the left (2 * (- #widthOfGrid) - 1)
-
-        // Two spots directly in front to the right (2 * (- #widthOfGrid) + 1)
-        int visionDepth = 0;
+        getVisibleOrganismCount(visibleSpots);
+        return;
     }
 
-    void getToroidalBound(int cellSpot, int visionDepth){
-        if (cellSpot < 0) {
-            cellSpot = (visionDepth - 1);
+    /*
+        Input: Vector of integers/size_t
+        Output: Int
+        Purpose: Returns the number of visible organism in specified visible area
+    */
+    int getVisibleOrganismCount(emp::vector<size_t> visibleSpots){
+        int countOfOrgs = 0;
+        for (int spot : visibleSpots){
+            std::cout << "spot: " << spot << std::endl;
+            if(IsOccupied(spot)){
+                countOfOrgs++;
+            }
         }
-        if (y_neighbor > (num_h_boxes - 1)) {
-            y_neighbor = 0;
+        std::cout << "Count of organism visible: " << countOfOrgs << std::endl;
+        return countOfOrgs;
+    }
+
+    int getToroidalBound(int cellCheck) {
+        // Convert the cur 1D index into simulated/fake 2D coords
+        int x = cellCheck % grid_w_boxes; // column
+        int y = cellCheck / grid_w_boxes; // row
+
+        // Toroidal wrap on the x-axis (columns)
+        if (x < 0) {
+            x += grid_w_boxes;
+        } 
+        else if (x >= grid_w_boxes) {
+            x -= grid_w_boxes;
         }
-        if (x_neighbor < 0) {
-            x_neighbor = (num_w_boxes - 1);
+
+        // Toroidal wrap on the y-axis (rows)
+        if (y < 0) {
+            y += grid_h_boxes;
+        } 
+        else if (y >= grid_h_boxes) {
+            y -= grid_h_boxes;
         }
-        if (x_neighbor > (num_w_boxes - 1)){
-            x_neighbor = 0;
-        }
+
+        // Convert the wrapped 2D coordinates back into a 1D index cause that's what we have
+        int adjustedSpot = y * (grid_w_boxes + x);
+        return adjustedSpot;
     }
 };
 #endif
