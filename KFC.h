@@ -31,8 +31,8 @@ public:
     */
     void Process(double given_points) override
     {
-        // used to be -30
-        AddPoints(0); // cost of metabolism
+        // used to be -30 for metabolism
+        AddPoints(30);// points for surviving
     }
 
     /*

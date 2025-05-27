@@ -58,13 +58,17 @@ public:
         for (int i : schedule2)
         {
             if (IsOccupied(i))
-            {
-                emp::Ptr<Organism> offspring = pop[i]->CheckReproduction();
+            {  
+                if (pop[i]->SpeciesName() != "Predator"){
+                    std::cout << "Called: " << pop[i]->SpeciesName() << std::endl;
+                    emp::Ptr<Organism> offspring = pop[i]->CheckReproduction();
 
-                // If offspring is made, place into non-empty box
-                if (offspring)
-                {
-                    PlaceOffspring(offspring, i);
+                    // If offspring is made, place into non-empty box
+                    if (offspring)
+                    {
+                        PlaceOffspring(offspring, i);
+                    }
+
                 }
 
                 // Move non-grass organisms to random neighboring position, if occupied check if can be eaten
@@ -115,7 +119,7 @@ public:
 
             given_org->hasEaten = true;
 
-            AddOrgAt(given_org, diff_org_position);
+            //AddOrgAt(given_org, diff_org_position);
             return true;
         }
         return false;
@@ -229,11 +233,11 @@ public:
 
                 visibleSpots.push_back(target);
 
-                std::cout << "Visible spot at depth " << h << ": " << target << std::endl;
+                //std::cout << "Visible spot at depth " << h << ": " << target << std::endl;
             }
         }
         getVisibleOrganismCount(visibleSpots);
-        Attack(visibleSpots);
+        Attack(visibleSpots, pop[cellSpot]);
         return;
     }
 
@@ -247,7 +251,7 @@ public:
         int countOfOrgs = 0;
         for (int spot : visibleSpots)
         {
-            std::cout << "spot: " << spot << std::endl;
+            //std::cout << "spot: " << spot << std::endl;
             if (IsOccupied(spot))
             {
                 countOfOrgs++;
@@ -257,7 +261,7 @@ public:
         return countOfOrgs;
     }
 
-    void Attack(const emp::vector<size_t> &visibleSpots)
+    void Attack(const emp::vector<size_t> &visibleSpots, emp::Ptr<Organism> organism)
     {
         emp::vector<size_t> targets;
         for (size_t spot : visibleSpots)
@@ -270,13 +274,13 @@ public:
 
         if (!targets.empty())
         {
-            size_t chosen = random.GetUInt(targets.size());
+            int chosen = random.GetInt(targets.size());
             std::cout << "Deleting organism at: " << targets[chosen] << std::endl;
-            DeleteOrganism(targets[chosen]);
+            EatSpecies(organism, targets[chosen]);
         }
         else
         {
-            std::cout << "No target available to attack." << std::endl;
+            //std::cout << "No target available to attack." << std::endl;
         }
     }
 

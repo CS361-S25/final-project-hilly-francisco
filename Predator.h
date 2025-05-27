@@ -31,9 +31,9 @@ public:
     */
     virtual bool SpeciesEat(Organism *other) override
     {
-        if (other->SpeciesName() == "Deer")
+        if (other->SpeciesName() == "KFC")
         {
-            points += 700;
+            points += 0;
             return true;
         }
         else
@@ -55,7 +55,7 @@ public:
             SetPoints(0);
             emp::Ptr<Predator> PredatorOffSpring = new Predator(random, 0.0);
             PredatorOffSpring->SetPoints(0);
-            return PredatorOffSpring;
+            return nullptr;
         }
         return nullptr;
     }
