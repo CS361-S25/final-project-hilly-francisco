@@ -121,13 +121,15 @@ public:
     /*
         Input: Void
         Output: Void
-        Purpose: Creates and adds a Predator type organism to world
+        Purpose: Creates and adds a Predator type organism to world with random vision values
     */
     void CreateandAddPredator(emp::Random &ran, int num)
     {
         for (int i = 0; i < num; i++)
         {
-            Predator *Predator_org = new Predator(&random_gen_2, 800);
+            int randomWidthVision = 1 + 2 * ran.GetInt(1, 5);
+            int randomHeightVision = ran.GetInt(1, 5);
+            Predator *Predator_org = new Predator(&random_gen_2, 800, randomHeightVision, randomWidthVision);
             world.AddOrgAt(Predator_org, ran.GetInt(0, world.GetSize()));
         }
     }

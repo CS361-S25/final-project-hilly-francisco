@@ -32,7 +32,7 @@ public:
     void Process(double given_points) override
     {
         // used to be -30 for metabolism
-        AddPoints(30);// points for surviving
+        AddPoints(0);// points for surviving
     }
 
     /*

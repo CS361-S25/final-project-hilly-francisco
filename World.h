@@ -6,6 +6,7 @@
 #include "emp/math/Random.hpp"
 
 #include "Org.h"
+#include "Predator.h"
 
 class OrgWorld : public emp::World<Organism>
 {
@@ -60,7 +61,7 @@ public:
             if (IsOccupied(i))
             {  
                 if (pop[i]->SpeciesName() != "Predator"){
-                    std::cout << "Called: " << pop[i]->SpeciesName() << std::endl;
+                    //std::cout << "Called: " << pop[i]->SpeciesName() << std::endl;
                     emp::Ptr<Organism> offspring = pop[i]->CheckReproduction();
 
                     // If offspring is made, place into non-empty box
@@ -115,7 +116,7 @@ public:
         // Check if org can eat species at occupied area
         if (given_org->SpeciesEat(pop[diff_org_position]))
         {
-            DeleteOrganism(pop[diff_org_position]);
+            DeleteOrganism(diff_org_position);
 
             given_org->hasEaten = true;
 
@@ -201,16 +202,20 @@ public:
     */
     void checkVisibleArea(int cellSpot)
     {
-        // Must always be pos
-        int heightOfVision = 3;
+        emp::Ptr<Organism> org_ptr = pop[cellSpot];
 
-        // Must be pos and odd (clean pyramids that way)
-        int widthOfVision = 5;
+        // Try casting to Predator
+        Predator* pred_ptr = dynamic_cast<Predator*>(org_ptr.Raw());
+
+        int heightOfVision = pred_ptr->getHeightOfVision();
+        int widthOfVision = pred_ptr->getWidthOfVision();
+
+        std::cout << "Height is: " << heightOfVision << " Width is: " << widthOfVision << std::endl;
 
         // Dumb Math
         int numberOfSpots = (heightOfVision * widthOfVision) - heightOfVision * (heightOfVision - 1);
 
-        std::cout << "cell spot " << ": " << cellSpot << std::endl;
+        //std::cout << "cell spot " << ": " << cellSpot << std::endl;
 
         // Store spots into this for easy org check
         emp::vector<size_t> visibleSpots;
@@ -274,14 +279,30 @@ public:
 
         if (!targets.empty())
         {
-            int chosen = random.GetInt(targets.size());
-            std::cout << "Deleting organism at: " << targets[chosen] << std::endl;
-            EatSpecies(organism, targets[chosen]);
+            float attackChance = getAttackChance(targets.size());
+            if (random.GetDouble() < attackChance)
+            {
+                int chosen = random.GetInt(targets.size());
+                std::cout << "Deleting organism at: " << targets[chosen] << std::endl;
+                EatSpecies(organism, targets[chosen]);
+            }
+            else
+            {
+                // Attack failed due to probability check
+                std::cout << "Attack failed due to probability." << std::endl;
+            }
         }
         else
         {
-            //std::cout << "No target available to attack." << std::endl;
+            // No target available to attack
         }
+    }
+
+    float getAttackChance(int visibleTargets){
+        if (visibleTargets <= 0) return 0.0f;
+        int chanceOfAttack = 1.0f/visibleTargets;
+
+        return chanceOfAttack;
     }
 
     int getToroidalBound(int cellCheck)

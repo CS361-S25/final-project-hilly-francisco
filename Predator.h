@@ -11,8 +11,18 @@ class Predator : public Organism
 {
 
 public:
-    Predator(emp::Ptr<emp::Random> _random, double _points = 0.0)
-        : Organism(_random, _points) {}
+
+    int totalPreyEaten;
+    // Must always be pos
+    int heightOfVision = 3;
+
+    // Must be pos and odd (clean pyramids that way)
+    int widthOfVision = 5;
+
+    Predator(emp::Ptr<emp::Random> _random, double _points = 0.0, int _heightOfVision = 3, int _widthOfVision = 5)
+        : Organism(_random, _points),           
+          heightOfVision(_heightOfVision),
+          widthOfVision(_widthOfVision){}
 
     /*
         Input: Void
@@ -23,6 +33,10 @@ public:
     {
         return "Predator";
     }
+
+    int getHeightOfVision(){return heightOfVision;}
+
+    int getWidthOfVision(){return widthOfVision;}
 
     /*
         Input: Organism class
