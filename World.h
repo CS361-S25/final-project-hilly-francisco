@@ -227,7 +227,7 @@ public:
         for (int h = 0; h < heightOfVision; h++)
         {
             // How many cells to left/right at this cur depth
-            int curWidth = widthOfVision - (2 * h);
+            int curWidth = std::max(1, widthOfVision - 2*h);
             int half = curWidth / 2;
 
             // go north by h rows

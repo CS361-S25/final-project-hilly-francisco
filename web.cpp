@@ -20,8 +20,8 @@ class AEAnimator : public emp::web::Animate
 {
 
     // arena width and height
-    const int num_h_boxes = 10;
-    const int num_w_boxes = 10;
+    const int num_h_boxes = 20;
+    const int num_w_boxes = 20;
     const double RECT_SIDE = 25;
     const double width{num_w_boxes * RECT_SIDE};
     const double height{num_h_boxes * RECT_SIDE};
@@ -101,7 +101,9 @@ public:
     void AddOrgs()
     {
         CreateandAddKFC(random_gen_2, num_of_KFC);
-        CreateandAddPredator(random_gen_2, num_of_Predator);
+        //CreateandAddPredator(random_gen_2, num_of_Predator);
+        //CreateandAddTestPredator();
+        CreateandAddTestLowPredator();
     }
 
     /*
@@ -133,6 +135,22 @@ public:
             world.AddOrgAt(Predator_org, ran.GetInt(0, world.GetSize()));
         }
     }
+
+    void CreateandAddTestPredator() {
+            int randomWidthVision = 7;
+            int randomHeightVision = 4;
+            Predator *Predator_org = new Predator(&random_gen_2, 800, randomHeightVision, randomWidthVision);
+            world.AddOrgAt(Predator_org, 100);
+    };
+
+    void CreateandAddTestLowPredator() {
+            
+            int randomWidthVision = 2;
+            int randomHeightVision = 5;
+            Predator *Predator_org = new Predator(&random_gen_2, 800, randomHeightVision, randomWidthVision);
+            world.AddOrgAt(Predator_org, 100);
+            std::cout << "This is printing" << std::endl;
+    };
 };
 
 AEAnimator animator;
