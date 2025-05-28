@@ -4,6 +4,7 @@
 #include "emp/Evolve/World.hpp"
 #include "emp/math/random_utils.hpp"
 #include "emp/math/Random.hpp"
+#include "emp/data/DataFile.hpp"
 #include <set>
 
 #include "Org.h"
@@ -14,6 +15,10 @@ class OrgWorld : public emp::World<Organism>
 
     emp::Random &random;
     emp::Ptr<emp::Random> random_ptr;
+
+    // Data Variables
+    emp::Ptr<emp::DataMonitor<double, emp::data::Histogram>> data_node_orgcoop;
+    emp::Ptr<emp::DataMonitor<int>> data_node_count;
 
 public:
     int grid_w_boxes = 10;
@@ -64,9 +69,10 @@ public:
         for (int i : schedule2)
         {
             if (IsOccupied(i))
-            {  
-                if (pop[i]->SpeciesName() != "Predator"){
-                    //std::cout << "Called: " << pop[i]->SpeciesName() << std::endl;
+            {
+                if (pop[i]->SpeciesName() != "Predator")
+                {
+                    // std::cout << "Called: " << pop[i]->SpeciesName() << std::endl;
                     emp::Ptr<Organism> offspring = pop[i]->CheckReproduction();
 
                     // If offspring is made, place into non-empty box
@@ -74,7 +80,6 @@ public:
                     {
                         PlaceOffspring(offspring, i);
                     }
-
                 }
 
                 // Move non-grass organisms to random neighboring position, if occupied check if can be eaten
@@ -125,7 +130,7 @@ public:
 
             given_org->hasEaten = true;
 
-            //AddOrgAt(given_org, diff_org_position);
+            // AddOrgAt(given_org, diff_org_position);
             return true;
         }
         return false;
@@ -210,7 +215,7 @@ public:
         emp::Ptr<Organism> org_ptr = pop[cellSpot];
 
         // Try casting to Predator
-        Predator* pred_ptr = dynamic_cast<Predator*>(org_ptr.Raw());
+        Predator *pred_ptr = dynamic_cast<Predator *>(org_ptr.Raw());
 
         int heightOfVision = pred_ptr->getHeightOfVision();
         int widthOfVision = pred_ptr->getWidthOfVision();
@@ -222,12 +227,12 @@ public:
         // Dumb Math
         int numberOfSpots = (heightOfVision * widthOfVision) - heightOfVision * (heightOfVision - 1);
 
-        //std::cout << "cell spot " << ": " << cellSpot << std::endl;
+        // std::cout << "cell spot " << ": " << cellSpot << std::endl;
 
         for (int h = 0; h < heightOfVision; h++)
         {
             // How many cells to left/right at this cur depth
-            int curWidth = std::max(1, widthOfVision - 2*h);
+            int curWidth = std::max(1, widthOfVision - 2 * h);
             int half = curWidth / 2;
 
             // go north by h rows
@@ -243,7 +248,7 @@ public:
                 visibleSpots.push_back(target);
                 highlighted_cells.insert(target); // <-- Add to the set for GUI
 
-                //std::cout << "Visible spot at depth " << h << ": " << target << std::endl;
+                // std::cout << "Visible spot at depth " << h << ": " << target << std::endl;
             }
         }
         getVisibleOrganismCount(visibleSpots);
@@ -261,7 +266,7 @@ public:
         int countOfOrgs = 0;
         for (int spot : visibleSpots)
         {
-            //std::cout << "spot: " << spot << std::endl;
+            // std::cout << "spot: " << spot << std::endl;
             if (IsOccupied(spot))
             {
                 countOfOrgs++;
@@ -303,26 +308,33 @@ public:
         }
     }
 
-    float getAttackChance(int visibleTargets){
-        if (visibleTargets <= 0) return 0.0f;
-        int chanceOfAttack = 1.0f/visibleTargets;
+    float getAttackChance(int visibleTargets)
+    {
+        if (visibleTargets <= 0)
+            return 0.0f;
+        int chanceOfAttack = 1.0f / visibleTargets;
 
         return chanceOfAttack;
     }
 
-int getToroidalBound(int cellCheck) {
-  int x = cellCheck % grid_w_boxes;
-  int y = cellCheck / grid_w_boxes;
+    int getToroidalBound(int cellCheck)
+    {
+        int x = cellCheck % grid_w_boxes;
+        int y = cellCheck / grid_w_boxes;
 
-  // wrap x
-  if (x < 0)      x += grid_w_boxes;
-  else if (x >= grid_w_boxes) x -= grid_w_boxes;
-  // wrap y
-  if (y < 0)      y += grid_h_boxes;
-  else if (y >= grid_h_boxes) y -= grid_h_boxes;
+        // wrap x
+        if (x < 0)
+            x += grid_w_boxes;
+        else if (x >= grid_w_boxes)
+            x -= grid_w_boxes;
+        // wrap y
+        if (y < 0)
+            y += grid_h_boxes;
+        else if (y >= grid_h_boxes)
+            y -= grid_h_boxes;
 
-  return y * grid_w_boxes + x;
-}
+        return y * grid_w_boxes + x;
+    }
 
     int GetToroidalDistance(int idx1, int idx2)
     {
@@ -339,6 +351,62 @@ int getToroidalBound(int cellCheck) {
         dy = std::min(dy, grid_h_boxes - dy);
 
         return dx + dy; // Manhattan distance
+    }
+
+    // Everything for gathering data
+    emp::DataMonitor<int> &GetOrgCountDataNode()
+    {
+        if (!data_node_count)
+        {
+            data_node_count.New();
+            OnUpdate([this](size_t)
+                     {
+    data_node_count -> Reset();
+    for (size_t i = 0; i < pop.size(); i++)
+        if(IsOccupied(i))
+        data_node_count->AddDatum((1)); });
+        }
+        return *data_node_count;
+    }
+
+    emp::DataMonitor<double, emp::data::Histogram> &GetOrgCoopValDataNode()
+    {
+        if (!data_node_orgcoop)
+        {
+            data_node_orgcoop.New();
+            OnUpdate([this](size_t)
+                     {
+          data_node_orgcoop->Reset();
+          for (size_t i = 0; i< pop.size(); i++)
+          if (IsOccupied(i))
+              data_node_orgcoop->AddDatum(pop[i]); });
+        }
+        data_node_orgcoop->SetupBins(0.0, 1.1, 11);
+        return *data_node_orgcoop;
+    }
+
+    emp::DataFile &SetupOrgFile(const std::string &filename)
+    {
+        auto &file = SetupFile(filename);
+        auto &node1 = GetOrgCountDataNode();
+        auto &node = GetOrgCoopValDataNode();
+        file.AddVar(update, "update", "Update");
+        file.AddMean(node, "mean_coopval", "Average organism cooperation value");
+        file.AddTotal(node1, "count", "Total number of organisms");
+        file.AddHistBin(node, 0, "Hist_0.0", "Count for histogram bin 0.0 to <0.1");
+        file.AddHistBin(node, 1, "Hist_0.1", "Count for histogram bin 0.1 to <0.2");
+        file.AddHistBin(node, 2, "Hist_0.2", "Count for histogram bin 0.2 to <0.3");
+        file.AddHistBin(node, 3, "Hist_0.3", "Count for histogram bin 0.3 to <0.4");
+        file.AddHistBin(node, 4, "Hist_0.4", "Count for histogram bin 0.4 to <0.5");
+        file.AddHistBin(node, 5, "Hist_0.5", "Count for histogram bin 0.5 to <0.6");
+        file.AddHistBin(node, 6, "Hist_0.6", "Count for histogram bin 0.6 to <0.7");
+        file.AddHistBin(node, 7, "Hist_0.7", "Count for histogram bin 0.7 to <0.8");
+        file.AddHistBin(node, 8, "Hist_0.8", "Count for histogram bin 0.8 to <0.9");
+        file.AddHistBin(node, 9, "Hist_0.9", "Count for histogram bin 0.9 to 1.0");
+
+        file.PrintHeaderKeys();
+
+        return file;
     }
 };
 #endif
