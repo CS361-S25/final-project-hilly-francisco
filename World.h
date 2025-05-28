@@ -4,6 +4,7 @@
 #include "emp/Evolve/World.hpp"
 #include "emp/math/random_utils.hpp"
 #include "emp/math/Random.hpp"
+#include <set>
 
 #include "Org.h"
 #include "Predator.h"
@@ -18,6 +19,9 @@ public:
     int grid_w_boxes = 10;
     int grid_h_boxes = 10;
 
+    // Store all visible spots for all predators in the current update
+    std::set<size_t> highlighted_cells;
+
     OrgWorld(emp::Random &_random) : emp::World<Organism>(_random), random(_random)
     {
         random_ptr.New(_random);
@@ -31,6 +35,7 @@ public:
     {
 
         double pointsPerUpdate = 0;
+        highlighted_cells.clear();
 
         emp::World<Organism>::Update();
 
@@ -210,15 +215,14 @@ public:
         int heightOfVision = pred_ptr->getHeightOfVision();
         int widthOfVision = pred_ptr->getWidthOfVision();
 
+        emp::vector<size_t> visibleSpots;
+
         std::cout << "Height is: " << heightOfVision << " Width is: " << widthOfVision << std::endl;
 
         // Dumb Math
         int numberOfSpots = (heightOfVision * widthOfVision) - heightOfVision * (heightOfVision - 1);
 
         //std::cout << "cell spot " << ": " << cellSpot << std::endl;
-
-        // Store spots into this for easy org check
-        emp::vector<size_t> visibleSpots;
 
         for (int h = 0; h < heightOfVision; h++)
         {
@@ -237,6 +241,7 @@ public:
                 target = getToroidalBound(target);
 
                 visibleSpots.push_back(target);
+                highlighted_cells.insert(target); // <-- Add to the set for GUI
 
                 //std::cout << "Visible spot at depth " << h << ": " << target << std::endl;
             }
@@ -305,36 +310,19 @@ public:
         return chanceOfAttack;
     }
 
-    int getToroidalBound(int cellCheck)
-    {
-        // Convert the cur 1D index into simulated/fake 2D coords
-        int x = cellCheck % grid_w_boxes; // column
-        int y = cellCheck / grid_w_boxes; // row
+int getToroidalBound(int cellCheck) {
+  int x = cellCheck % grid_w_boxes;
+  int y = cellCheck / grid_w_boxes;
 
-        // Toroidal wrap on the x-axis (columns)
-        if (x < 0)
-        {
-            x += grid_w_boxes;
-        }
-        else if (x >= grid_w_boxes)
-        {
-            x -= grid_w_boxes;
-        }
+  // wrap x
+  if (x < 0)      x += grid_w_boxes;
+  else if (x >= grid_w_boxes) x -= grid_w_boxes;
+  // wrap y
+  if (y < 0)      y += grid_h_boxes;
+  else if (y >= grid_h_boxes) y -= grid_h_boxes;
 
-        // Toroidal wrap on the y-axis (rows)
-        if (y < 0)
-        {
-            y += grid_h_boxes;
-        }
-        else if (y >= grid_h_boxes)
-        {
-            y -= grid_h_boxes;
-        }
-
-        // Convert the wrapped 2D coordinates back into a 1D index cause that's what we have
-        int adjustedSpot = y * (grid_w_boxes + x);
-        return adjustedSpot;
-    }
+  return y * grid_w_boxes + x;
+}
 
     int GetToroidalDistance(int idx1, int idx2)
     {

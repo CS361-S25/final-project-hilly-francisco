@@ -20,13 +20,13 @@ class AEAnimator : public emp::web::Animate
 {
 
     // arena width and height
-    const int num_h_boxes = 30;
-    const int num_w_boxes = 30;
+    const int num_h_boxes = 10;
+    const int num_w_boxes = 10;
     const double RECT_SIDE = 25;
     const double width{num_w_boxes * RECT_SIDE};
     const double height{num_h_boxes * RECT_SIDE};
 
-    const int num_of_KFC = 100;
+    const int num_of_KFC = 50;
     const int num_of_Predator = 1;
 
     emp::web::Canvas canvas{width, height, "canvas"};
