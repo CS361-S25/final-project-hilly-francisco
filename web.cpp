@@ -91,6 +91,22 @@ public:
                 org_num++;
             }
         }
+
+
+        for (int spot : world.highlighted_cells){
+            //std::cout << "The spot is " << spot << std::endl;
+            int x = spot / num_h_boxes;   // integer division
+            int y = spot % num_h_boxes;
+            canvas.Rect(x * RECT_SIDE, y * RECT_SIDE, RECT_SIDE, RECT_SIDE, "black", "black");
+        }
+
+        for (int spot : world.attackRange_cells){
+            //std::cout << "The spot is " << spot << std::endl;
+            int x = spot / num_h_boxes;   // integer division
+            int y = spot % num_h_boxes;
+            canvas.Rect(x * RECT_SIDE, y * RECT_SIDE, RECT_SIDE, RECT_SIDE, "yellow", "black");
+        }
+
     }
 
     /*
@@ -145,11 +161,10 @@ public:
 
     void CreateandAddTestLowPredator() {
             
-            int randomWidthVision = 2;
+            int randomWidthVision = 9;
             int randomHeightVision = 5;
             Predator *Predator_org = new Predator(&random_gen_2, 800, randomHeightVision, randomWidthVision);
-            world.AddOrgAt(Predator_org, 100);
-            std::cout << "This is printing" << std::endl;
+            world.AddOrgAt(Predator_org, 152);
     };
 };
 

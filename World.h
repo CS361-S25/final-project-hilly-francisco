@@ -21,11 +21,12 @@ class OrgWorld : public emp::World<Organism>
     emp::Ptr<emp::DataMonitor<int>> data_node_count;
 
 public:
-    int grid_w_boxes = 10;
-    int grid_h_boxes = 10;
+    int grid_w_boxes = 20;
+    int grid_h_boxes = 20;
 
     // Store all visible spots for all predators in the current update
     std::set<size_t> highlighted_cells;
+    std::set<size_t> attackRange_cells;
 
     OrgWorld(emp::Random &_random) : emp::World<Organism>(_random), random(_random)
     {
@@ -41,6 +42,7 @@ public:
 
         double pointsPerUpdate = 0;
         highlighted_cells.clear();
+        attackRange_cells.clear();
 
         emp::World<Organism>::Update();
 
@@ -60,7 +62,7 @@ public:
                 // Call function to check cells in hardcoded areas
                 if (pop[cellSpot]->SpeciesName() == "Predator")
                 {
-                    checkVisibleArea(cellSpot);
+                    checkPredVisibleArea(cellSpot);
                 }
             }
         }
@@ -208,52 +210,83 @@ public:
     /*
         Input: Integer
         Output: Void
-        Purpose: Checks an organisms visible area in front of it (Only N rn)
+        Purpose: Checks an organisms visible area in front of it (Only N rn) and attacks visible orgs
     */
-    void checkVisibleArea(int cellSpot)
+    void checkPredVisibleArea(int cellSpot)
     {
+        //std::cout << "Predator spot: " << cellSpot << std::endl;
         emp::Ptr<Organism> org_ptr = pop[cellSpot];
-
-        // Try casting to Predator
         Predator *pred_ptr = dynamic_cast<Predator *>(org_ptr.Raw());
 
         int heightOfVision = pred_ptr->getHeightOfVision();
-        int widthOfVision = pred_ptr->getWidthOfVision();
+        int widthOfVision  = pred_ptr->getWidthOfVision();
 
         emp::vector<size_t> visibleSpots;
+        visibleSpots.reserve( heightOfVision * widthOfVision );
 
-        std::cout << "Height is: " << heightOfVision << " Width is: " << widthOfVision << std::endl;
+        visibleSpots = getVisibleArea(cellSpot, visibleSpots, heightOfVision, widthOfVision, &highlighted_cells);
 
-        // Dumb Math
-        int numberOfSpots = (heightOfVision * widthOfVision) - heightOfVision * (heightOfVision - 1);
+        // Give visible spots to necessary functions
+        getVisibleOrganismCount(visibleSpots);
+        emp::vector<size_t> attackSpots = checkAttackRange(cellSpot);
+        Attack(visibleSpots, pop[cellSpot], attackSpots);
+    }
 
-        // std::cout << "cell spot " << ": " << cellSpot << std::endl;
+    emp::vector<size_t> checkAttackRange(int cellSpot){
+        int heightOfVision = 2;
+        int widthOfVision  = 3;
 
-        for (int h = 0; h < heightOfVision; h++)
+        emp::vector<size_t> attackSpots;
+        attackSpots.reserve(heightOfVision * widthOfVision);
+        attackSpots = getVisibleArea(cellSpot, attackSpots, heightOfVision, widthOfVision, &attackRange_cells);
+
+
+        return attackSpots;
+    }
+
+    emp::vector<size_t> getVisibleArea(int cellSpot, emp::vector<size_t> givenVector, int Height, int Width, std::set<size_t> *optionalVector = NULL){
+        givenVector.reserve(Height * Width);
+
+        // We need to figure out (col, row). GRID IS IN COLUMN-MAJOR ORDER
+        int cols = grid_w_boxes;
+        int rows = grid_h_boxes;
+
+        // column index = cellSpot / #rows
+        // row index    = cellSpot % #rows
+        int col0 = cellSpot / rows;
+        int row0 = cellSpot % rows;
+
+        // For each "layer" h = 0..heightOfVision-1, we look (h+1) cells north:
+        for (int h = 0; h < Height; h++)
         {
-            // How many cells to left/right at this cur depth
-            int curWidth = std::max(1, widthOfVision - 2 * h);
+            // how many columns to include at this "depth"
+            int curWidth = std::max(1, Width - 2*h);
             int half = curWidth / 2;
 
-            // go north by h rows
-            int basePos = cellSpot - ((h + 1) * grid_w_boxes);
+            // move (h+1) steps *up* (north) = subtract from row0
+            int newRow = row0 - (h + 1);
+            // toroidal wrap in [0 .. rows-1]
+            newRow = ((newRow % rows) + rows) % rows;
 
-            for (int leftAndRightCount = -half; leftAndRightCount <= half; leftAndRightCount++)
+            // scan left TO right
+            for (int dcol = -half; dcol <= half; dcol++)
             {
-                int target = basePos + leftAndRightCount;
+                int newCol = col0 + dcol;
+                // wrap horizontally in [0 .. cols-1]
+                newCol = ((newCol % cols) + cols) % cols;
 
-                // Toroidal wrap function call to ensure...well toroidal wrapping
-                target = getToroidalBound(target);
+                // convert (newCol, newRow) back to a column‐major index:
+                size_t target = (size_t)newCol * rows + newRow;
 
-                visibleSpots.push_back(target);
-                highlighted_cells.insert(target); // <-- Add to the set for GUI
+                givenVector.push_back(target);
 
-                // std::cout << "Visible spot at depth " << h << ": " << target << std::endl;
+                if (optionalVector != NULL){
+                    optionalVector->insert(target);
+                }
             }
         }
-        getVisibleOrganismCount(visibleSpots);
-        Attack(visibleSpots, pop[cellSpot]);
-        return;
+
+        return givenVector;
     }
 
     /*
@@ -276,10 +309,11 @@ public:
         return countOfOrgs;
     }
 
-    void Attack(const emp::vector<size_t> &visibleSpots, emp::Ptr<Organism> organism)
+    void Attack(const emp::vector<size_t> &visibleSpots, emp::Ptr<Organism> organism, emp::vector<size_t> attackSpots)
     {
         emp::vector<size_t> targets;
-        for (size_t spot : visibleSpots)
+        // Get spots with prey in them
+        for (size_t spot : attackSpots)
         {
             if (IsOccupied(spot))
             {
@@ -287,6 +321,7 @@ public:
             }
         }
 
+        // If at least one prey in attack range
         if (!targets.empty())
         {
             float attackChance = getAttackChance(targets.size());
@@ -302,10 +337,6 @@ public:
                 std::cout << "Attack failed due to probability." << std::endl;
             }
         }
-        else
-        {
-            // No target available to attack
-        }
     }
 
     float getAttackChance(int visibleTargets)
@@ -315,42 +346,6 @@ public:
         int chanceOfAttack = 1.0f / visibleTargets;
 
         return chanceOfAttack;
-    }
-
-    int getToroidalBound(int cellCheck)
-    {
-        int x = cellCheck % grid_w_boxes;
-        int y = cellCheck / grid_w_boxes;
-
-        // wrap x
-        if (x < 0)
-            x += grid_w_boxes;
-        else if (x >= grid_w_boxes)
-            x -= grid_w_boxes;
-        // wrap y
-        if (y < 0)
-            y += grid_h_boxes;
-        else if (y >= grid_h_boxes)
-            y -= grid_h_boxes;
-
-        return y * grid_w_boxes + x;
-    }
-
-    int GetToroidalDistance(int idx1, int idx2)
-    {
-        int x1 = idx1 % grid_w_boxes;
-        int y1 = idx1 / grid_w_boxes;
-        int x2 = idx2 % grid_w_boxes;
-        int y2 = idx2 / grid_w_boxes;
-
-        int dx = std::abs(x1 - x2);
-        int dy = std::abs(y1 - y2);
-
-        // Wrap distances
-        dx = std::min(dx, grid_w_boxes - dx);
-        dy = std::min(dy, grid_h_boxes - dy);
-
-        return dx + dy; // Manhattan distance
     }
 
     // Everything for gathering data
