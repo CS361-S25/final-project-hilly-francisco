@@ -9,18 +9,20 @@
 #include "emp/config/ArgManager.hpp"
 
 #include "World.h"
+#include "KFC.h"
+#include "Predator.h"
 
 // This is the main function for the NATIVE version of this project.
 
 EMP_BUILD_CONFIG(MyConfigType,
                  VALUE(SEED, int, 10, "What value should the random seed be?"),
-                 VALUE(START_PROB, double, 0.5, "What cooperation probability value should the starting organism have?"),
+                 VALUE(VISIBILITY, int, 5, "What visibiilyt should the starting organism have?"),
+                 VALUE(PREYCOUNT, int, 30, "How many starting prey should there be?"),
                  VALUE(FILE_PATH, std::string, "", "Output file path"),
                  VALUE(FILE_NAME, std::string, "_data.dat", "Root output file name"))
 
 int main(int argc, char *argv[])
 {
-
     MyConfigType config;
 
     bool success = config.Read("MySettings.cfg");
@@ -39,19 +41,42 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    emp::Random random(config.SEED());
-    OrgWorld world(random);
+    // Build the simulations
 
-    for (size_t i = 0; i < 10; i++)
+    for (size_t i = 0; i < 5; i++)
     {
-    }
+        emp::Random random(5);
+        OrgWorld world{random};
+        world.Resize(10, 10);
 
-    world.Resize(10, 10);
+        // Set PreyCount and Visibility
+        int PreyCount = config.PREYCOUNT();
+        int Visibilty = config.VISIBILITY();
+        int VisionHeight = 4;
+        int VisionWidth = 1;
 
-    world.SetupOrgFile(config.FILE_PATH() + "Org_Vals" + std::to_string(config.SEED()) + config.FILE_NAME());
+        // Inject KFC Organisms (Can I use the same random variable here?)
+        for (int x = 0; x < PreyCount; x++)
+        {
+            KFC *KFC_org = new KFC(&random, 400);
+            world.Inject(*KFC_org);
+        }
 
-    for (int update = 0; update < 40; update++)
-    {
-        world.Update();
+        // Inject Predator Organisms
+        Predator *predator_org = new Predator(&random, 800, VisionHeight, VisionWidth);
+        world.Inject(*predator_org);
+
+        // Do 100 updates
+        for (int update = 0; update < 100; update++)
+        {
+            world.Update();
+        }
+
+        // Make the Data File
+        world.SetupOrgFile(config.FILE_PATH() + "Org_Vals" + std::to_string(config.SEED()) + config.FILE_NAME());
+
+        // Before the next update, increase vision
+        VisionHeight = +1;
+        VisionWidth = +2;
     }
 }

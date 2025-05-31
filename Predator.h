@@ -11,8 +11,7 @@ class Predator : public Organism
 {
 
 public:
-
-    int totalPreyEaten;
+    int totalPreyConsumed = 0;
     // Must always be pos
     int heightOfVision = 3;
 
@@ -20,9 +19,9 @@ public:
     int widthOfVision = 5;
 
     Predator(emp::Ptr<emp::Random> _random, double _points = 0.0, int _heightOfVision = 3, int _widthOfVision = 5)
-        : Organism(_random, _points),           
+        : Organism(_random, _points),
           heightOfVision(_heightOfVision),
-          widthOfVision(_widthOfVision){}
+          widthOfVision(_widthOfVision) {}
 
     /*
         Input: Void
@@ -34,9 +33,11 @@ public:
         return "Predator";
     }
 
-    int getHeightOfVision(){return heightOfVision;}
+    int getHeightOfVision() { return heightOfVision; }
 
-    int getWidthOfVision(){return widthOfVision;}
+    int getWidthOfVision() { return widthOfVision; }
+    int getTotalPreyConsumed() { return totalPreyConsumed; }
+    void increasePreyConsumed() { totalPreyConsumed = +1; }
 
     /*
         Input: Organism class
@@ -98,7 +99,7 @@ public:
         points += given_points;
         if (hasEaten == false)
         {
-            //points -= 15;
+            // points -= 15;
             points -= 0;
         }
     }
