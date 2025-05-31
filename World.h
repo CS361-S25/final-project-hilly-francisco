@@ -127,8 +127,9 @@ public:
         if (given_org->SpeciesEat(pop[diff_org_position]))
         {
             DeleteOrganism(diff_org_position);
-
-            given_org->hasEaten = true;
+            Predator *pred_ptr = dynamic_cast<Predator *>(given_org.Raw());
+            pred_ptr->increasePreyConsumed();
+            given_org->hasEaten = true; // What is this for?
             // Data monitor: predator succuess
 
             // AddOrgAt(given_org, diff_org_position);
@@ -256,7 +257,7 @@ public:
         }
         int visibility = getVisibleOrganismCount(visibleSpots);
         // Save visibility to a data node
-        data_node_visibility->AddDatum(visibility);
+        // data_node_visibility->AddDatum(visibility);
         Attack(visibleSpots, pop[cellSpot]);
         return;
     }

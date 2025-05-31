@@ -63,8 +63,8 @@ int main(int argc, char *argv[])
         }
 
         // Inject Predator Organisms
-        Predator *Predator_org = new Predator(&random, 800, VisionHeight, VisionWidth);
-        world.Inject(*Predator_org);
+        Predator *predator_org = new Predator(&random, 800, VisionHeight, VisionWidth);
+        world.Inject(*predator_org);
 
         // Do 100 updates
         for (int update = 0; update < 100; update++)
