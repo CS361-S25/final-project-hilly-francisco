@@ -97,14 +97,16 @@ public:
             //std::cout << "The spot is " << spot << std::endl;
             int x = spot / num_h_boxes;   // integer division
             int y = spot % num_h_boxes;
-            canvas.Rect(x * RECT_SIDE, y * RECT_SIDE, RECT_SIDE, RECT_SIDE, "black", "black");
+            //canvas.Rect(x * RECT_SIDE, y * RECT_SIDE, RECT_SIDE, RECT_SIDE, "black", "black");
+            canvas.Rect(x * RECT_SIDE, y * RECT_SIDE, RECT_SIDE, RECT_SIDE, "rgba(0, 0, 0, 0.3)", "black");
         }
 
         for (int spot : world.attackRange_cells){
             //std::cout << "The spot is " << spot << std::endl;
             int x = spot / num_h_boxes;   // integer division
             int y = spot % num_h_boxes;
-            canvas.Rect(x * RECT_SIDE, y * RECT_SIDE, RECT_SIDE, RECT_SIDE, "yellow", "black");
+            //canvas.Rect(x * RECT_SIDE, y * RECT_SIDE, RECT_SIDE, RECT_SIDE, "yellow", "black");
+            canvas.Rect(x * RECT_SIDE, y * RECT_SIDE, RECT_SIDE, RECT_SIDE, "rgba(255, 255, 0, 0.3)", "black");
         }
 
     }
