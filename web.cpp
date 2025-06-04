@@ -238,11 +238,15 @@ public:
         doc << GetToggleButton("Toggle");
         doc << GetStepButton("Step");
 
+        doc << "<h2> Current Status </h2>"
+                "In the config, only prey population & seed work! "
+                "Some more text. <br>";
+
         doc << "<h2> Simulation </h2>"
                 "This Simulation attempts to show the co-evolution of predator and prey organisms' behavior and morphology. "
                 "Predators are given a set range of visible area they can see determined by given vision width and height. "
                 "Prey in return move around the grid in two distinct styles, swarming and dispersal."
-                "Some more text. <br>";
+                " <br>";
 
         doc << "<h2> Results: </h2>";
         doc << "<strong> Predator Confusion Mechanism </strong>: A predator's liklihood of successfully hunting prey is determined by the number of prey they can see. The more prey in it's field of view, results in a lower successful attack chance. <br>" 
