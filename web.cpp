@@ -27,11 +27,12 @@ class AEAnimator : public emp::web::Animate
 {
 
     // arena width and height
-    int num_h_boxes = 20;
-    int num_w_boxes = 20;
+    int num_h_boxes = 30;
+    int num_w_boxes = 30;
     const double RECT_SIDE = 25;
     const double width{num_w_boxes * RECT_SIDE};
     const double height{num_h_boxes * RECT_SIDE};
+    int sim_count = 0;
 
     emp::Random  *random;
     OrgWorld *world;
@@ -58,9 +59,8 @@ public:
         // shove canvas into the div
         // along with a control button
         doc << "<h1> Coevolution of predator and prey morphology and behavior </h1>";
-        doc << canvas;
-        doc << GetToggleButton("Toggle");
-        doc << GetStepButton("Step");
+
+        InsertText();
         SetConfigPanel();
         AddOrgs();
 
@@ -74,9 +74,29 @@ public:
     */
     void DoFrame() override
     {
+        // if (sim_count == 1000){
+        //     world->Reset();
+
+        //     world->SetPopStruct_Grid(num_w_boxes, num_h_boxes);
+        //     world->Resize(num_h_boxes, num_w_boxes);
+
+        //     CreateandAddKFC(random_gen_2, config.PREY_SIZE());
+        //     CreateandAddTestPredator();
+        // }
+
+        if (sim_count % 500 == 0){
+            world->Reset();
+
+            world->SetPopStruct_Grid(num_w_boxes, num_h_boxes);
+            world->Resize(num_h_boxes, num_w_boxes);
+
+            CreateandAddKFC(random_gen_2, config.PREY_SIZE());
+            CreateandAddPredator(random_gen_2, 1);
+        }
         canvas.Clear();
         world->Update();
         DrawSquares();
+        sim_count += 1;
     }
 
     /*
@@ -155,9 +175,16 @@ public:
         config_panel.SetRange("SEED_NUM", "1", "10");
         config_panel.SetRange("PREY_SIZE", "1", "50");
         config_panel.SetRange("GRID_WIDTH", "1", "200");
+
         config_panel.SetRange("GRID_HEIGHT", "1", "200");
 
-        settings.SetCSS("max-width", "500px");
+        settings.SetCSS("max-width", "700px");
+        settings.SetCSS("padding", "10px");
+        settings.SetCSS("margin", "10px");
+
+        canvas.SetCSS("max-width", "100%");
+        canvas.SetCSS("height", "auto");
+        canvas.SetCSS("display", "block");
     }
 
     /*
@@ -183,26 +210,44 @@ public:
     {
         for (int i = 0; i < num; i++)
         {
-            int randomWidthVision = 1 + 2 * ran.GetInt(1, 5);
-            int randomHeightVision = ran.GetInt(1, 5);
+            int randomWidthVision = 1 + 2 * ran.GetInt(1, 9);
+            int randomHeightVision = ran.GetInt(1, 9);
             Predator *Predator_org = new Predator(&random_gen_2, 800, randomHeightVision, randomWidthVision);
-            world->AddOrgAt(Predator_org, ran.GetInt(0, world->GetSize()));
+            world->AddOrgAt(Predator_org, 410);
+            // 152 for grid size of 20 x 20
         }
     }
 
     void CreateandAddTestPredator() {
-            int randomWidthVision = 7;
-            int randomHeightVision = 4;
+            int randomWidthVision = 9;
+            int randomHeightVision = 5;
             Predator *Predator_org = new Predator(&random_gen_2, 800, randomHeightVision, randomWidthVision);
-            world->AddOrgAt(Predator_org, 100);
+            world->AddOrgAt(Predator_org, 410);
     };
 
     void CreateandAddTestLowPredator() {
             
-            int randomWidthVision = 9;
-            int randomHeightVision = 5;
-            Predator *Predator_org = new Predator(&random_gen_2, 800, randomHeightVision, randomWidthVision);
-            world->AddOrgAt(Predator_org, 152);
+        int randomWidthVision = 3;
+        int randomHeightVision = 6;
+        Predator *Predator_org = new Predator(&random_gen_2, 800, randomHeightVision, randomWidthVision);
+        world->AddOrgAt(Predator_org, 410);
+    };
+
+    void InsertText() {
+        doc << canvas;
+        doc << GetToggleButton("Toggle");
+        doc << GetStepButton("Step");
+
+        doc << "<h2> Simulation </h2>"
+                "This Simulation attempts to show the co-evolution of predator and prey organisms' behavior and morphology. "
+                "Predators are given a set range of visible area they can see determined by given vision width and height. "
+                "Prey in return move around the grid in two distinct styles, swarming and dispersal."
+                "Some more text. <br>";
+
+        doc << "<h2> Results: </h2>";
+        doc << "<strong> Predator Confusion Mechanism </strong>: A predator's liklihood of successfully hunting prey is determined by the number of prey they can see. The more prey in it's field of view, results in a lower successful attack chance. <br>" 
+                "<b> Narrow vision leads to dispersal </b>: With the PCM in mind, narrow predator vision results in dispersal prey behavior being best for prey survival.<br>"
+                "<strong> Broader vision leads to swarming </strong>: In turn, broader predator vision gives leeway to swarming behavior among prey for better survivability. <br>";
     };
 };
 

@@ -21,8 +21,8 @@ class OrgWorld : public emp::World<Organism>
     emp::Ptr<emp::DataMonitor<int>> data_node_count;
 
 public:
-    int grid_w_boxes = 20;
-    int grid_h_boxes = 20;
+    int grid_w_boxes = 30;
+    int grid_h_boxes = 30;
 
     const pop_t &GetPopulation() { return pop; }
 
@@ -68,6 +68,18 @@ public:
                 }
             }
         }
+
+        for (int i : schedule2) {
+        if (IsOccupied(i) && pop[i]->SpeciesName() == "Predator") {
+            emp::vector<size_t> visibleSpots;
+            Predator *pred_ptr = dynamic_cast<Predator *>(pop[i].Raw());
+            visibleSpots = getVisibleArea(i, {}, pred_ptr->getHeightOfVision(), pred_ptr->getWidthOfVision());
+            int closest = FindClosestPrey(i, visibleSpots);
+            if (closest != -1) {
+                MovePredatorTowards(i, closest);
+            }
+        }
+    }
 
         // Checks conditions for reproduction and lets organisms move
         for (int i : schedule2)
@@ -352,6 +364,77 @@ public:
         int chanceOfAttack = 1.0f / visibleTargets;
 
         return chanceOfAttack;
+    }
+
+    int FindClosestPrey(int predator_index, const emp::vector<size_t>& visibleSpots) {
+        int min_dist = std::numeric_limits<int>::max();
+        int closest_prey_index = -1;
+
+        for (int spot : visibleSpots) {
+            if (IsOccupied(spot) && pop[spot]->SpeciesName() == "KFC") {
+                int dist = GetManhattanDistance(predator_index, spot);
+                if (dist < min_dist) {
+                    min_dist = dist;
+                    closest_prey_index = spot;
+                }
+            }
+        }
+
+        return closest_prey_index;
+    }
+
+    int GetManhattanDistance(int index1, int index2) {
+        int col1 = index1 / grid_h_boxes;
+        int row1 = index1 % grid_h_boxes;
+
+        int col2 = index2 / grid_h_boxes;
+        int row2 = index2 % grid_h_boxes;
+
+        return std::abs(col1 - col2) + std::abs(row1 - row2);
+    }
+
+    void MovePredatorTowards(int predator_index, int prey_index) {
+        int col_pred = predator_index / grid_h_boxes;
+        int row_pred = predator_index % grid_h_boxes;
+
+        int col_prey = prey_index / grid_h_boxes;
+        int row_prey = prey_index % grid_h_boxes;
+
+        emp::vector<std::pair<int, int>> moves;
+
+        // Check if prey is "north" considering toroidal wrap
+        int vertical_dist = (row_pred - row_prey + grid_h_boxes) % grid_h_boxes;
+        if (vertical_dist > 0 && vertical_dist <= grid_h_boxes / 2) {
+            int target_row = (row_pred - 1 + grid_h_boxes) % grid_h_boxes;
+
+            if ((col_prey - col_pred + grid_w_boxes) % grid_w_boxes <= grid_w_boxes / 2) {
+                // Prefer moving toward the prey column-wise as well
+                if (col_prey < col_pred || (col_prey > col_pred && (col_prey - col_pred) > grid_w_boxes / 2)) {
+                    moves.emplace_back((col_pred - 1 + grid_w_boxes) % grid_w_boxes, target_row); // top-left
+                }
+                if (col_prey > col_pred || (col_pred > col_prey && (col_pred - col_prey) > grid_w_boxes / 2)) {
+                    moves.emplace_back((col_pred + 1) % grid_w_boxes, target_row); // top-right
+                }
+            }
+
+            moves.emplace_back(col_pred, target_row); // directly up
+        }
+
+        // Attempt moves in preferred order
+        for (auto [new_col, new_row] : moves) {
+            int new_index = new_col * grid_h_boxes + new_row;
+
+            if (!IsOccupied(new_index)) {
+                auto org = ExtractOrganism(predator_index);
+                AddOrgAt(org, new_index);
+                return;
+            }
+            else if (EatSpecies(pop[predator_index], new_index)) {
+                return;
+            }
+        }
+
+        // fallback: no move
     }
 
     // Everything for gathering data
