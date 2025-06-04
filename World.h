@@ -21,8 +21,8 @@ class OrgWorld : public emp::World<Organism>
     emp::Ptr<emp::DataMonitor<int>> data_node_count;
 
 public:
-    int grid_w_boxes = 30;
-    int grid_h_boxes = 30;
+    int grid_w_boxes = 40;
+    int grid_h_boxes = 40;
 
     const pop_t &GetPopulation() { return pop; }
 
@@ -384,13 +384,16 @@ public:
     }
 
     int GetManhattanDistance(int index1, int index2) {
-        int col1 = index1 / grid_h_boxes;
-        int row1 = index1 % grid_h_boxes;
+        // Below converts Colum-Major grid into x,y thing
+        int x1 = index1 / grid_h_boxes;
+        int y1 = index1 % grid_h_boxes;
 
-        int col2 = index2 / grid_h_boxes;
-        int row2 = index2 % grid_h_boxes;
+        int x2 = index2 / grid_h_boxes;
+        int y2 = index2 % grid_h_boxes;
 
-        return std::abs(col1 - col2) + std::abs(row1 - row2);
+        int distance = std::abs(x1 - x2) + std::abs(y1 - y2);
+
+        return distance;
     }
 
     void MovePredatorTowards(int predator_index, int prey_index) {
@@ -404,10 +407,12 @@ public:
 
         // Check if prey is "north" considering toroidal wrap
         int vertical_dist = (row_pred - row_prey + grid_h_boxes) % grid_h_boxes;
+        
         if (vertical_dist > 0 && vertical_dist <= grid_h_boxes / 2) {
             int target_row = (row_pred - 1 + grid_h_boxes) % grid_h_boxes;
 
             if ((col_prey - col_pred + grid_w_boxes) % grid_w_boxes <= grid_w_boxes / 2) {
+
                 // Prefer moving toward the prey column-wise as well
                 if (col_prey < col_pred || (col_prey > col_pred && (col_prey - col_pred) > grid_w_boxes / 2)) {
                     moves.emplace_back((col_pred - 1 + grid_w_boxes) % grid_w_boxes, target_row); // top-left
@@ -435,6 +440,11 @@ public:
         }
 
         // fallback: no move
+    }
+
+    void SwarmBehavior(){
+        // Find closest prey
+
     }
 
     // Everything for gathering data

@@ -19,16 +19,16 @@ emp::web::Document doc{"target"};
 emp::web::Document settings("settings");
 MyConfigType config;
 
-// Create random generator and world
-emp::Random random_gen_2(5);
-OrgWorld world{random_gen_2};
+// // Create random generator and world
+// emp::Random random_gen_2(5);
+// OrgWorld world{random_gen_2};
 
 class AEAnimator : public emp::web::Animate
 {
 
     // arena width and height
-    int num_h_boxes = 30;
-    int num_w_boxes = 30;
+    int num_h_boxes = 40;
+    int num_w_boxes = 40;
     const double RECT_SIDE = 25;
     const double width{num_w_boxes * RECT_SIDE};
     const double height{num_h_boxes * RECT_SIDE};
@@ -90,8 +90,8 @@ public:
             world->SetPopStruct_Grid(num_w_boxes, num_h_boxes);
             world->Resize(num_h_boxes, num_w_boxes);
 
-            CreateandAddKFC(random_gen_2, config.PREY_SIZE());
-            CreateandAddPredator(random_gen_2, 1);
+            CreateandAddKFC(*random, config.PREY_SIZE());
+            CreateandAddPredator(*random, config.PRED_SIZE());
         }
         canvas.Clear();
         world->Update();
@@ -136,7 +136,6 @@ public:
             //std::cout << "The spot is " << spot << std::endl;
             int x = spot / num_h_boxes;   // integer division
             int y = spot % num_h_boxes;
-            //canvas.Rect(x * RECT_SIDE, y * RECT_SIDE, RECT_SIDE, RECT_SIDE, "black", "black");
             canvas.Rect(x * RECT_SIDE, y * RECT_SIDE, RECT_SIDE, RECT_SIDE, "rgba(0, 0, 0, 0.3)", "black");
         }
 
@@ -144,7 +143,6 @@ public:
             //std::cout << "The spot is " << spot << std::endl;
             int x = spot / num_h_boxes;   // integer division
             int y = spot % num_h_boxes;
-            //canvas.Rect(x * RECT_SIDE, y * RECT_SIDE, RECT_SIDE, RECT_SIDE, "yellow", "black");
             canvas.Rect(x * RECT_SIDE, y * RECT_SIDE, RECT_SIDE, RECT_SIDE, "rgba(255, 255, 0, 0.3)", "black");
         }
 
@@ -157,9 +155,7 @@ public:
     */
     void AddOrgs()
     {
-        CreateandAddKFC(random_gen_2, config.PREY_SIZE());
-        //CreateandAddPredator(random_gen_2, num_of_Predator);
-        //CreateandAddTestPredator();
+        CreateandAddKFC(*random, config.PREY_SIZE());
         CreateandAddTestLowPredator();
     }
 
@@ -173,7 +169,7 @@ public:
         settings << config_panel;
         config_panel.SetRange("PRED_SIZE", "1", "10");
         config_panel.SetRange("SEED_NUM", "1", "10");
-        config_panel.SetRange("PREY_SIZE", "1", "50");
+        config_panel.SetRange("PREY_SIZE", "1", "200");
         config_panel.SetRange("GRID_WIDTH", "1", "200");
 
         config_panel.SetRange("GRID_HEIGHT", "1", "200");
@@ -196,7 +192,7 @@ public:
     {
         for (int i = 0; i < num; i++)
         {
-            KFC *KFC_org = new KFC(&random_gen_2, 400);
+            KFC *KFC_org = new KFC(random, 400);
             world->AddOrgAt(KFC_org, ran.GetInt(0, world->GetSize()));
         }
     }
@@ -210,9 +206,9 @@ public:
     {
         for (int i = 0; i < num; i++)
         {
-            int randomWidthVision = 1 + 2 * ran.GetInt(1, 9);
-            int randomHeightVision = ran.GetInt(1, 9);
-            Predator *Predator_org = new Predator(&random_gen_2, 800, randomHeightVision, randomWidthVision);
+            int randomWidthVision = 1 + 2 * ran.GetInt(1, 13);
+            int randomHeightVision = ran.GetInt(1, 10);
+            Predator *Predator_org = new Predator(random, 800, randomHeightVision, randomWidthVision);
             world->AddOrgAt(Predator_org, 410);
             // 152 for grid size of 20 x 20
         }
@@ -221,7 +217,7 @@ public:
     void CreateandAddTestPredator() {
             int randomWidthVision = 9;
             int randomHeightVision = 5;
-            Predator *Predator_org = new Predator(&random_gen_2, 800, randomHeightVision, randomWidthVision);
+            Predator *Predator_org = new Predator(random, 800, randomHeightVision, randomWidthVision);
             world->AddOrgAt(Predator_org, 410);
     };
 
@@ -229,7 +225,7 @@ public:
             
         int randomWidthVision = 3;
         int randomHeightVision = 6;
-        Predator *Predator_org = new Predator(&random_gen_2, 800, randomHeightVision, randomWidthVision);
+        Predator *Predator_org = new Predator(random, 800, randomHeightVision, randomWidthVision);
         world->AddOrgAt(Predator_org, 410);
     };
 
