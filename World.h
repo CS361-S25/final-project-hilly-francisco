@@ -24,6 +24,8 @@ public:
     int grid_w_boxes = 20;
     int grid_h_boxes = 20;
 
+    const pop_t &GetPopulation() { return pop; }
+
     // Store all visible spots for all predators in the current update
     std::set<size_t> highlighted_cells;
     std::set<size_t> attackRange_cells;
