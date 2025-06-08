@@ -74,15 +74,6 @@ public:
     */
     void DoFrame() override
     {
-        // if (sim_count == 1000){
-        //     world->Reset();
-
-        //     world->SetPopStruct_Grid(num_w_boxes, num_h_boxes);
-        //     world->Resize(num_h_boxes, num_w_boxes);
-
-        //     CreateandAddKFC(random_gen_2, config.PREY_SIZE());
-        //     CreateandAddTestPredator();
-        // }
 
         if (sim_count % 500 == 0){
             world->Reset();
@@ -90,8 +81,8 @@ public:
             world->SetPopStruct_Grid(num_w_boxes, num_h_boxes);
             world->Resize(num_h_boxes, num_w_boxes);
 
-            CreateandAddKFC(*random, config.PREY_SIZE());
-            CreateandAddPredator(*random, config.PRED_SIZE());
+            CreateandAddKFC(*random, config.PREY_POP_SIZE());
+            CreateandAddPredator(*random, config.PRED_POP_SIZE());
         }
         canvas.Clear();
         world->Update();
@@ -155,7 +146,7 @@ public:
     */
     void AddOrgs()
     {
-        CreateandAddKFC(*random, config.PREY_SIZE());
+        CreateandAddKFC(*random, config.PREY_POP_SIZE());
         CreateandAddTestLowPredator();
     }
 
@@ -169,8 +160,9 @@ public:
         settings << config_panel;
         config_panel.SetRange("PRED_SIZE", "1", "10");
         config_panel.SetRange("SEED_NUM", "1", "10");
-        config_panel.SetRange("PREY_SIZE", "1", "200");
+        config_panel.SetRange("PREY_POP_SIZE", "1", "200");
         config_panel.SetRange("GRID_WIDTH", "1", "200");
+        config_panel.SetRange("PREY_BEHAVIOR", "0", "1");
 
         config_panel.SetRange("GRID_HEIGHT", "1", "200");
 
@@ -193,6 +185,7 @@ public:
         for (int i = 0; i < num; i++)
         {
             KFC *KFC_org = new KFC(random, 400);
+            KFC_org->setBehavior(config.PREY_BEHAVIOR());
             world->AddOrgAt(KFC_org, ran.GetInt(0, world->GetSize()));
         }
     }

@@ -9,6 +9,7 @@
 
 #include "Org.h"
 #include "Predator.h"
+#include "KFC.h"
 
 class OrgWorld : public emp::World<Organism>
 {
@@ -20,90 +21,136 @@ class OrgWorld : public emp::World<Organism>
     emp::Ptr<emp::DataMonitor<double, emp::data::Histogram>> data_node_visibility;
     emp::Ptr<emp::DataMonitor<int>> data_node_count;
 
-public:
-    int grid_w_boxes = 40;
-    int grid_h_boxes = 40;
+    public:
+        int grid_w_boxes = 40;
+        int grid_h_boxes = 40;
 
+    // grab org at population index
     const pop_t &GetPopulation() { return pop; }
 
     // Store all visible spots for all predators in the current update
     std::set<size_t> highlighted_cells;
     std::set<size_t> attackRange_cells;
 
-    OrgWorld(emp::Random &_random) : emp::World<Organism>(_random), random(_random)
-    {
+    OrgWorld(emp::Random &_random) : emp::World<Organism>(_random), random(_random) {
         random_ptr.New(_random);
     }
 
-    ~OrgWorld()
-    {
-    }
+    ~OrgWorld() {}
 
-    void Update()
+    void Update() 
     {
 
         double pointsPerUpdate = 0;
+
+        // Clear recorded cells for new update
         highlighted_cells.clear();
         attackRange_cells.clear();
 
         emp::World<Organism>::Update();
 
+        // Grab orgs in randomized ordering
         emp::vector<size_t> schedule1 = emp::GetPermutation(random, GetSize());
         emp::vector<size_t> schedule2 = emp::GetPermutation(random, GetSize());
 
         // Calls the process function for each organism
         CallProcesses(schedule1, pointsPerUpdate);
 
-        // Method for vision check, maybe be in org, but we'll see
-        for (int cellSpot : schedule1)
-        {
+        // Handle each organism according to species type
+        for (int cellSpot :schedule2){
+            if (!IsOccupied(cellSpot)) {continue;}
 
-            // Working only with cells that have an organism
-            if (IsOccupied(cellSpot))
-            {
-                // Call function to check cells in hardcoded areas
-                if (pop[cellSpot]->SpeciesName() == "Predator")
-                {
-                    checkPredVisibleArea(cellSpot);
-                }
-            }
+            const auto name = pop[cellSpot]->SpeciesName();
+
+            if (name == "Predator") {HandlePredator(cellSpot);}
+
+            else if (name == "KFC") {HandlePrey(cellSpot);}
         }
 
-        for (int i : schedule2) {
-        if (IsOccupied(i) && pop[i]->SpeciesName() == "Predator") {
-            emp::vector<size_t> visibleSpots;
-            Predator *pred_ptr = dynamic_cast<Predator *>(pop[i].Raw());
-            visibleSpots = getVisibleArea(i, {}, pred_ptr->getHeightOfVision(), pred_ptr->getWidthOfVision());
-            int closest = FindClosestPrey(i, visibleSpots);
-            if (closest != -1) {
-                MovePredatorTowards(i, closest);
-            }
+        // Checks conditions for reproduction and lets organisms move
+        // NO REPRODUCTION RN
+        // for (int i : schedule2)
+        // {
+        //     if (IsOccupied(i))
+        //     {
+        //         if (pop[i]->SpeciesName() != "Predator")
+        //         {
+        //             // std::cout << "Called: " << pop[i]->SpeciesName() << std::endl;
+        //             emp::Ptr<Organism> offspring = pop[i]->CheckReproduction();
+
+        //             // If offspring is made, place into non-empty box
+        //             if (offspring)
+        //             {
+        //                 PlaceOffspring(offspring, i);
+        //             }
+        //         }
+
+        //         // Move non-grass organisms to random neighboring position, if occupied check if can be eaten
+        //         if (pop[i]->SpeciesName() != "Predator")
+        //         {
+        //             MoveOrg(i);
+        //         }
+        //     }
+        // }
+    }
+
+    void HandlePredator(int cellSpot){
+        // Attack in visible area
+        checkPredVisibleArea(cellSpot);
+
+        // Move predator
+        emp::vector<size_t> visibleSpots;
+
+        // Get predator pointer to call predator methods
+        Predator *pred_ptr = dynamic_cast<Predator *>(pop[cellSpot].Raw());
+        visibleSpots = getVisibleArea(cellSpot, {}, pred_ptr->getHeightOfVision(), pred_ptr->getWidthOfVision());
+        
+        // Find prey if any
+        int closest = FindClosestPrey(cellSpot, visibleSpots);
+
+        if (closest != -1) {
+            MovePredatorTowards(cellSpot, closest);
+        }
+
+        // If no prey found, just move randomly
+        else{
+            auto org = ExtractOrganism(cellSpot);
+            auto dest = GetRandomNeighborPos(cellSpot).GetIndex();
+            AddOrgAt(org, dest);
         }
     }
 
-        // Checks conditions for reproduction and lets organisms move
-        for (int i : schedule2)
-        {
-            if (IsOccupied(i))
-            {
-                if (pop[i]->SpeciesName() != "Predator")
-                {
-                    // std::cout << "Called: " << pop[i]->SpeciesName() << std::endl;
-                    emp::Ptr<Organism> offspring = pop[i]->CheckReproduction();
+    void HandlePrey(int cellSpot){
+        // Get prey pointer to call prey methods
+        emp::Ptr<Organism> org_ptr = pop[cellSpot];
+        KFC *prey_ptr = dynamic_cast<KFC *>(org_ptr.Raw());
 
-                    // If offspring is made, place into non-empty box
-                    if (offspring)
-                    {
-                        PlaceOffspring(offspring, i);
-                    }
-                }
+        // Collect neighbors
+        auto nbrs = GetNeighborIndices(cellSpot);
+        emp::vector<size_t> open_spots;
+        for (size_t n : nbrs) if (!IsOccupied(n)) open_spots.push_back(n);
 
-                // Move non-grass organisms to random neighboring position, if occupied check if can be eaten
-                if (pop[i]->SpeciesName() != "Predator")
-                {
-                    MoveOrg(i);
-                }
-            }
+        if (open_spots.empty()) {
+            // no room to move: stay
+            return;
+        }
+
+        // pick best spot
+        size_t best_spot = cellSpot;
+        if (prey_ptr->prey_swarm_mode) {
+            best_spot = MoveTowardPrey(cellSpot, open_spots);
+        } else {
+            best_spot = MoveAwayFromPrey(cellSpot, open_spots);
+        }
+
+        // if we found a different spot, move; else, random move
+        if (best_spot != cellSpot) {
+            auto org = ExtractOrganism(cellSpot);
+            AddOrgAt(org, best_spot);
+        } 
+        
+        else {
+            MoveOrg(cellSpot);
         }
     }
 
@@ -233,15 +280,20 @@ public:
     void checkPredVisibleArea(int cellSpot)
     {
         //std::cout << "Predator spot: " << cellSpot << std::endl;
+
+        // Grab Predator Pointer to call predator functions
         emp::Ptr<Organism> org_ptr = pop[cellSpot];
         Predator *pred_ptr = dynamic_cast<Predator *>(org_ptr.Raw());
 
+        // Grab height and width for vision
         int heightOfVision = pred_ptr->getHeightOfVision();
         int widthOfVision  = pred_ptr->getWidthOfVision();
 
+        // Create and reserve space for visible spots array
         emp::vector<size_t> visibleSpots;
         visibleSpots.reserve( heightOfVision * widthOfVision );
 
+        // Fill in visiblespots with function call
         visibleSpots = getVisibleArea(cellSpot, visibleSpots, heightOfVision, widthOfVision, &highlighted_cells);
 
         // Give visible spots to necessary functions
@@ -251,6 +303,7 @@ public:
     }
 
     emp::vector<size_t> checkAttackRange(int cellSpot){
+        // All predator have same attack range, only vision changes
         int heightOfVision = 2;
         int widthOfVision  = 3;
 
@@ -327,6 +380,7 @@ public:
         return countOfOrgs;
     }
 
+    // Predator-only attack function
     void Attack(const emp::vector<size_t> &visibleSpots, emp::Ptr<Organism> organism, emp::vector<size_t> attackSpots)
     {
         emp::vector<size_t> targets;
@@ -357,6 +411,7 @@ public:
         }
     }
 
+    // Predator Confusion Mechanism
     float getAttackChance(int visibleTargets)
     {
         if (visibleTargets <= 0)
@@ -366,6 +421,7 @@ public:
         return chanceOfAttack;
     }
 
+    // Find closest prey for swarming behavior
     int FindClosestPrey(int predator_index, const emp::vector<size_t>& visibleSpots) {
         int min_dist = std::numeric_limits<int>::max();
         int closest_prey_index = -1;
@@ -383,6 +439,7 @@ public:
         return closest_prey_index;
     }
 
+    // Grab distance between two organisms
     int GetManhattanDistance(int index1, int index2) {
         // Below converts Colum-Major grid into x,y thing
         int x1 = index1 / grid_h_boxes;
@@ -396,6 +453,7 @@ public:
         return distance;
     }
 
+    // Moves Predators toward given prey spot
     void MovePredatorTowards(int predator_index, int prey_index) {
         int col_pred = predator_index / grid_h_boxes;
         int row_pred = predator_index % grid_h_boxes;
@@ -442,10 +500,81 @@ public:
         // fallback: no move
     }
 
-    void SwarmBehavior(){
-        // Find closest prey
+    // Grab spots of neighbors
+    emp::vector<size_t> GetNeighborIndices(int cell_index) {
+        emp::vector<size_t> neighbor_indices;
+        // Convert linear index to (x, y) coordinates
+        int x = cell_index / grid_w_boxes;
+        int y = cell_index % grid_h_boxes;
 
+        for (int d_col = -1; d_col <= 1; ++d_col) {
+            for (int d_row = -1; d_row <= 1; ++d_row) {
+                // Skip the center cell itself
+                if (d_col == 0 && d_row == 0) continue;
+
+                // Wrap around toroidally
+                int nx = (x + d_col + grid_w_boxes) % grid_w_boxes;
+                int ny = (y + d_row + grid_h_boxes) % grid_h_boxes;
+
+                size_t neighbor_idx = nx * grid_h_boxes + ny;
+                neighbor_indices.push_back(neighbor_idx);
+            }
+        }
+
+        return neighbor_indices;
     }
+
+    // pick the open spot with the most adjacent prey
+    size_t MoveTowardPrey(size_t current_pos, const emp::vector<size_t>& candidates) {
+        // We want the maximum number of nearby prey; start below any possible neighbor count.
+        int max_adjacent_prey = -1;
+        size_t best_spot = current_pos;
+
+        for (size_t spot : candidates) {
+            // Count how many prey are adjacent to this candidate spot
+            int adjacent_prey_count = 0;
+            for (size_t neighbor : GetNeighborIndices(spot)) {
+                if (IsOccupied(neighbor) && pop[neighbor]->SpeciesName() == "KFC") {
+                    ++adjacent_prey_count;
+                }
+            }
+
+            // If this spot has more adjacent prey, it’s a better swarm location
+            if (adjacent_prey_count > max_adjacent_prey) {
+                max_adjacent_prey = adjacent_prey_count;
+                best_spot = spot;
+            }
+        }
+
+        return best_spot;
+    }
+
+    // Prey disperse behavior function
+    size_t MoveAwayFromPrey(size_t current_pos, const emp::vector<size_t>& candidates) {
+    // We want the minimum number of nearby prey; start higher than any possible neighbor count.
+    int min_adjacent_prey = std::numeric_limits<int>::max();
+    size_t best_spot = current_pos;
+
+    for (size_t spot : candidates) {
+        // Count how many prey are adjacent to this candidate spot
+        int adjacent_prey_count = 0;
+        for (size_t neighbor : GetNeighborIndices(spot)) {
+            if (IsOccupied(neighbor) && pop[neighbor]->SpeciesName() == "KFC") {
+                ++adjacent_prey_count;
+            }
+        }
+
+        // If this spot has fewer adjacent prey, it’s a better disperse location
+        if (adjacent_prey_count < min_adjacent_prey) {
+            min_adjacent_prey = adjacent_prey_count;
+            best_spot = spot;
+        }
+    }
+
+    return best_spot;
+}
+
+
 
     // Everything for gathering data
     emp::DataMonitor<int> &GetOrgCountDataNode()

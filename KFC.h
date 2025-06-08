@@ -11,9 +11,15 @@ class KFC : public Organism
 {
 
 public:
+
+    bool prey_swarm_mode = false;
+
     KFC(emp::Ptr<emp::Random> _random, double _points = 0.0)
         : Organism(_random, _points) {}
 
+
+    void setBehavior(bool behavior){prey_swarm_mode = behavior;}
+    
     /*
         Input: Void
         Output: std::string
