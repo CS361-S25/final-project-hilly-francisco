@@ -33,6 +33,9 @@ public:
     int grid_w_boxes = 40;
     int grid_h_boxes = 40;
     float camouflage_value = 0.1;
+    int total_prey_start = 100;
+
+
 
     // grab org at population index
     const pop_t &GetPopulation() { return pop; }
@@ -87,31 +90,34 @@ public:
             }
         }
 
-        // Checks conditions for reproduction and lets organisms move
-        // NO REPRODUCTION RN
-        // for (int i : schedule2)
-        // {
-        //     if (IsOccupied(i))
-        //     {
-        //         if (pop[i]->SpeciesName() != "Predator")
-        //         {
-        //             // std::cout << "Called: " << pop[i]->SpeciesName() << std::endl;
-        //             emp::Ptr<Organism> offspring = pop[i]->CheckReproduction();
+        // Calc fitness for each organism
+        int alive_prey = getCountAlivePrey();
 
-        //             // If offspring is made, place into non-empty box
-        //             if (offspring)
-        //             {
-        //                 PlaceOffspring(offspring, i);
-        //             }
-        //         }
+        for (int cellSpot : schedule1)
+        {
+            if (!IsOccupied(cellSpot))
+            {
+                continue;
+            }
 
-        //         // Move non-grass organisms to random neighboring position, if occupied check if can be eaten
-        //         if (pop[i]->SpeciesName() != "Predator")
-        //         {
-        //             MoveOrg(i);
-        //         }
-        //     }
-        // }
+            const auto name = pop[cellSpot]->SpeciesName();
+
+            if (name == "Predator")
+            {
+                emp::Ptr<Organism> org_ptr = pop[cellSpot];
+                Predator *pred_ptr = dynamic_cast<Predator *>(org_ptr.Raw());
+
+                pred_ptr->AddToFitness(total_prey_start - alive_prey);
+            }
+
+            else if (name == "KFC")
+            {
+                emp::Ptr<Organism> org_ptr = pop[cellSpot];
+                KFC *prey_ptr = dynamic_cast<KFC *>(org_ptr.Raw());
+
+                prey_ptr->AddToFitness(alive_prey);
+            }
+        }
     }
 
     void HandlePredator(int cellSpot)
@@ -353,7 +359,7 @@ public:
             if (random.GetDouble() < prey_ptr->getCamouflageVlaue()) 
             {
                 // successful camouflage → reward
-                std::cout << "hid succesfully adding pts to camo value" << std::endl;
+                //std::cout << "hid succesfully adding pts to camo value" << std::endl;
                 prey_ptr->addCamouflage(camouflage_value);
             } 
             else 
@@ -686,70 +692,62 @@ public:
     // Prey disperse behavior function
     size_t MoveAwayFromPrey(size_t current_pos, const emp::vector<size_t> &candidates)
     {
-    // We want the minimum number of nearby prey; start higher than any possible neighbor count.
-    int min_adjacent_prey = std::numeric_limits<int>::max();
-    size_t best_spot = current_pos;
+        // We want the minimum number of nearby prey; start higher than any possible neighbor count.
+        int min_adjacent_prey = std::numeric_limits<int>::max();
+        size_t best_spot = current_pos;
 
-        for (size_t spot : candidates)
-        {
-        // Count how many prey are adjacent to this candidate spot
-        int adjacent_prey_count = 0;
-            for (size_t neighbor : GetNeighborIndices(spot))
+            for (size_t spot : candidates)
             {
-                if (IsOccupied(neighbor) && pop[neighbor]->SpeciesName() == "KFC")
+            // Count how many prey are adjacent to this candidate spot
+            int adjacent_prey_count = 0;
+                for (size_t neighbor : GetNeighborIndices(spot))
                 {
-                ++adjacent_prey_count;
+                    if (IsOccupied(neighbor) && pop[neighbor]->SpeciesName() == "KFC")
+                    {
+                    ++adjacent_prey_count;
+                }
+            }
+
+            // If this spot has fewer adjacent prey, it’s a better disperse location
+                if (adjacent_prey_count < min_adjacent_prey)
+                {
+                min_adjacent_prey = adjacent_prey_count;
+                best_spot = spot;
             }
         }
 
-        // If this spot has fewer adjacent prey, it’s a better disperse location
-            if (adjacent_prey_count < min_adjacent_prey)
-            {
-            min_adjacent_prey = adjacent_prey_count;
-            best_spot = spot;
-        }
+        return best_spot;
     }
 
-    return best_spot;
-}
+    // Count how many prey are alive
+    int getCountAlivePrey()
+    {
+        int count = 0;
+        for (size_t i = 0; i < pop.size(); ++i)
+        {
+            if (IsOccupied(i) && pop[i]->SpeciesName() == "KFC")
+            {
+                ++count;
+            }
+        }
+        return count;
+    }
 
-    // // Prey Set Seen based on if they pass camo test
-    // void setPreySpotted(emp::vector<size_t> preySpotted)
-    // {
-    //     for (size_t prey : preySpotted)
-    //     {
-    //         // Grab Predator Pointer to call predator functions
-    //         emp::Ptr<Organism> org_ptr = pop[prey];
-    //         KFC *prey_ptr = dynamic_cast<KFC *>(org_ptr.Raw());
+    int getPredatorFitness()
+    {
+        float predFitness = 0;
+        for (size_t i = 0; i < pop.size(); ++i)
+        {
+            if (IsOccupied(i) && pop[i]->SpeciesName() == "Predator")
+            {
+                emp::Ptr<Organism> org_ptr = pop[i];
+                Predator *pred_ptr = dynamic_cast<Predator *>(org_ptr.Raw());
 
-    //         // Will prey successfully dodge predator vision?
-    //         if (random.GetDouble() < prey_ptr->camouflage_value)
-    //         {
-    //             continue;
-    //         }
-    //         else
-    //         {
-    //             prey_ptr->setSpotted(true);
-    //         }
-    //     }
-    // }
-    
-    // // Prey set/add camoflauge
-    // void setPreyCamoValue(emp::vector<size_t> preySpotted)
-    // {
-    //     for (size_t prey : preySpotted)
-    //     {
-    //         // Grab Predator Pointer to call predator functions
-    //         emp::Ptr<Organism> org_ptr = pop[prey];
-    //         KFC *prey_ptr = dynamic_cast<KFC *>(org_ptr.Raw());
-
-    //         // set prey as spotted
-    //         prey_ptr->addCamoflauge(camouflage_value);
-    //     }
-    // }
-
-    // Everything for gathering data
-
+                predFitness = pred_ptr->GetFitness();
+            }
+        }
+        return predFitness;
+    }
     emp::DataMonitor<int> &GetOrgPreyConsumedDataNode()
     {
         if (!data_prey_consumed)

@@ -78,6 +78,8 @@ public:
         // Every 500 stepps we get a new prey
         if (sim_count % 500 == 0)
         {
+            float predFitness = world->getPredatorFitness();
+            std::cout << "Here is the predators fitness ->" << predFitness << std::endl;
             world->Reset();
 
             world->SetPopStruct_Grid(num_w_boxes, num_h_boxes);
