@@ -24,7 +24,7 @@ void CreateandAddKFC(emp::Random &ran, int num)
     for (int i = 0; i < num; i++)
     {
         KFC *KFC_org = new KFC(&ran, 400);
-        KFC_org->setBehavior(0);
+        KFC_org->setBehavior(1);
         world->AddOrgAt(KFC_org, ran.GetInt(0, world->GetSize()));
     }
 }
@@ -33,10 +33,10 @@ void CreateandAddPredator(emp::Random &ran, int num)
 {
     for (int i = 0; i < num; i++)
     {
-        int randomWidthVision = 1 + 2 * ran.GetInt(1, 13);
-        int randomHeightVision = ran.GetInt(1, 10);
+        int randomWidthVision = 9;
+        int randomHeightVision = 5;
         Predator *Predator_org = new Predator(&ran, 800, randomHeightVision, randomWidthVision);
-        world->AddOrgAt(Predator_org, 410);
+        world->AddOrgAt(Predator_org, 152);
         // 152 for grid size of 20 x 20
         int vision_size = randomWidthVision * randomHeightVision;
         std::cout << "Vision Size: " << vision_size << std::endl; // This isn't the actual vision because of triagnles
@@ -76,7 +76,6 @@ int main(int argc, char *argv[])
     // Give values to your Orgworld
     random_ptr = new emp::Random(config.SEED_NUM());
     world = new OrgWorld(*random_ptr);
-    world->Resize(num_h_boxes, num_w_boxes);
 
     world->SetupOrgFile(config.FILE_PATH() + "Org_Vals" + std::to_string(config.SEED_NUM()) + config.FILE_NAME());
 
@@ -86,9 +85,10 @@ int main(int argc, char *argv[])
 
     CreateandAddKFC(*random_ptr, config.PREY_POP_SIZE());
     CreateandAddPredator(*random_ptr, config.PRED_POP_SIZE());
-    for (int update = 0; update < 155; update++)
+    for (int update = 0; update < 500; update++)
     {
         world->Update();
+        world->getPredatorFitness();
     }
 
     world->Reset();

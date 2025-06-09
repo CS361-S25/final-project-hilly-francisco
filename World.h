@@ -31,7 +31,7 @@ class OrgWorld : public emp::World<Organism>
     int vision_height;
     int total_prey_num;
     float attack_efficiency;
-    float fitness = 0;
+    int fitness;
 
 public:
     int grid_w_boxes = 40;
@@ -491,7 +491,7 @@ public:
         }
         else
         {
-            std::cout << "Attack failed due to probability.\n";
+            // std::cout << "Attack failed due to probability.\n";
         }
 
         // 5) Start the handling‐time clock now
@@ -742,18 +742,23 @@ public:
 
     int getPredatorFitness()
     {
-        float predFitness = 0;
-        for (size_t i = 0; i < pop.size(); ++i)
+        // 500 is the number of steps per predator
+        if (step_counter == 150)
         {
-            if (IsOccupied(i) && pop[i]->SpeciesName() == "Predator")
+            float predFitness = 0;
+            for (size_t i = 0; i < pop.size(); ++i)
             {
-                emp::Ptr<Organism> org_ptr = pop[i];
-                Predator *pred_ptr = dynamic_cast<Predator *>(org_ptr.Raw());
+                if (IsOccupied(i) && pop[i]->SpeciesName() == "Predator")
+                {
+                    emp::Ptr<Organism> org_ptr = pop[i];
+                    Predator *pred_ptr = dynamic_cast<Predator *>(org_ptr.Raw());
 
-                predFitness = pred_ptr->GetFitness();
+                    predFitness = pred_ptr->GetFitness();
+                    fitness = predFitness;
+                }
             }
+            return predFitness;
         }
-        return predFitness;
     }
     emp::DataMonitor<int> &GetOrgPreyConsumedDataNode()
     {
@@ -810,6 +815,7 @@ public:
         file.AddVar(vision_height, "predator_vision_height", "Vision height");
         file.AddVar(vision_width, "predator_vision_width", "Vision width");
         file.AddMean(node3, "attack_efficiency", "Mean attack efficiency");
+        file.AddVar(fitness, "predator_fitness", "Predator fitness");
 
         file.PrintHeaderKeys();
 
