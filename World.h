@@ -484,6 +484,7 @@ public:
         // 4) Do the probability roll exactly as before
         int idx = random.GetInt((int)targets.size());
         float attackChance = getAttackChance((int)targets.size());
+        float attack_efficiency = attackChance;
         if (random.GetDouble() < attackChance)
         {
             EatSpecies(org_ptr, targets[idx]);
