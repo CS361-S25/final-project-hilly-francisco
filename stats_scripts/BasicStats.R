@@ -7,7 +7,7 @@ colors <- c("#673F03", "#B50142","#AB08FF","#7B1DFF", "#5731FD","#5E8EFF", "#475
 
 #Set your working directory
 # TODO: Change PATH_TO_YOUR_FOLDER
-setwd("PATH_TO_YOUR_FOLDER/Example/")
+setwd("/Users/hillygangolf/Desktop/Coding/ArtificialLife/Final2/final-project-hilly-francisco/Example")
 
 #You can have whatever variables you want like this
 pop_cap <- 10000

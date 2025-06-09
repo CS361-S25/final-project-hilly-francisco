@@ -17,28 +17,37 @@ class OrgWorld : public emp::World<Organism>
     emp::Random &random;
     emp::Ptr<emp::Random> random_ptr;
 
-    // Data Variables
-    emp::Ptr<emp::DataMonitor<double, emp::data::Histogram>> data_node_visibility;
-    emp::Ptr<emp::DataMonitor<int>> data_node_count;
+    // Data Variables -- Not sure what to do with these for now
+    emp::Ptr<emp::DataMonitor<int>> data_prey_consumed;
+    emp::Ptr<emp::DataMonitor<int>> data_prey_seen;
+    emp::Ptr<emp::DataMonitor<int>> data_vision_size;
+    emp::Ptr<emp::DataMonitor<int>> data_vision_width;
+    emp::Ptr<emp::DataMonitor<int>> data_vision_height;
+    int total_prey_seen;
+    int total_prey_consumed;
+    int vision_size;
+    int vision_width;
+    int vision_height;
 
-    public:
-        int grid_w_boxes = 40;
-        int grid_h_boxes = 40;
+public:
+    int grid_w_boxes = 40;
+    int grid_h_boxes = 40;
 
     // grab org at population index
     const pop_t &GetPopulation() { return pop; }
 
     // Store all visible spots for all predators in the current update
-    std::set<size_t> highlighted_cells;
-    std::set<size_t> attackRange_cells;
+    std::set<size_t> highlighted_cells; // The amount of cells the predator
+    std::set<size_t> attackRange_cells; // Default attack range for predator
 
-    OrgWorld(emp::Random &_random) : emp::World<Organism>(_random), random(_random) {
+    OrgWorld(emp::Random &_random) : emp::World<Organism>(_random), random(_random)
+    {
         random_ptr.New(_random);
     }
 
     ~OrgWorld() {}
 
-    void Update() 
+    void Update()
     {
 
         double pointsPerUpdate = 0;
@@ -57,14 +66,24 @@ class OrgWorld : public emp::World<Organism>
         CallProcesses(schedule1, pointsPerUpdate);
 
         // Handle each organism according to species type
-        for (int cellSpot :schedule2){
-            if (!IsOccupied(cellSpot)) {continue;}
+        for (int cellSpot : schedule2)
+        {
+            if (!IsOccupied(cellSpot))
+            {
+                continue;
+            }
 
             const auto name = pop[cellSpot]->SpeciesName();
 
-            if (name == "Predator") {HandlePredator(cellSpot);}
+            if (name == "Predator")
+            {
+                HandlePredator(cellSpot);
+            }
 
-            else if (name == "KFC") {HandlePrey(cellSpot);}
+            else if (name == "KFC")
+            {
+                HandlePrey(cellSpot);
+            }
         }
 
         // Checks conditions for reproduction and lets organisms move
@@ -94,7 +113,8 @@ class OrgWorld : public emp::World<Organism>
         // }
     }
 
-    void HandlePredator(int cellSpot){
+    void HandlePredator(int cellSpot)
+    {
         // Attack in visible area
         checkPredVisibleArea(cellSpot);
 
@@ -104,23 +124,27 @@ class OrgWorld : public emp::World<Organism>
         // Get predator pointer to call predator methods
         Predator *pred_ptr = dynamic_cast<Predator *>(pop[cellSpot].Raw());
         visibleSpots = getVisibleArea(cellSpot, {}, pred_ptr->getHeightOfVision(), pred_ptr->getWidthOfVision());
-        
+        vision_size = visibleSpots.size();
+
         // Find prey if any
         int closest = FindClosestPrey(cellSpot, visibleSpots);
 
-        if (closest != -1) {
+        if (closest != -1)
+        {
             MovePredatorTowards(cellSpot, closest);
         }
 
         // If no prey found, just move randomly
-        else{
+        else
+        {
             auto org = ExtractOrganism(cellSpot);
             auto dest = GetRandomNeighborPos(cellSpot).GetIndex();
             AddOrgAt(org, dest);
         }
     }
 
-    void HandlePrey(int cellSpot){
+    void HandlePrey(int cellSpot)
+    {
         // Get prey pointer to call prey methods
         emp::Ptr<Organism> org_ptr = pop[cellSpot];
         KFC *prey_ptr = dynamic_cast<KFC *>(org_ptr.Raw());
@@ -128,28 +152,36 @@ class OrgWorld : public emp::World<Organism>
         // Collect neighbors
         auto nbrs = GetNeighborIndices(cellSpot);
         emp::vector<size_t> open_spots;
-        for (size_t n : nbrs) if (!IsOccupied(n)) open_spots.push_back(n);
+        for (size_t n : nbrs)
+            if (!IsOccupied(n))
+                open_spots.push_back(n);
 
-        if (open_spots.empty()) {
+        if (open_spots.empty())
+        {
             // no room to move: stay
             return;
         }
 
         // pick best spot
         size_t best_spot = cellSpot;
-        if (prey_ptr->prey_swarm_mode) {
+        if (prey_ptr->prey_swarm_mode)
+        {
             best_spot = MoveTowardPrey(cellSpot, open_spots);
-        } else {
+        }
+        else
+        {
             best_spot = MoveAwayFromPrey(cellSpot, open_spots);
         }
 
         // if we found a different spot, move; else, random move
-        if (best_spot != cellSpot) {
+        if (best_spot != cellSpot)
+        {
             auto org = ExtractOrganism(cellSpot);
             AddOrgAt(org, best_spot);
-        } 
-        
-        else {
+        }
+
+        else
+        {
             MoveOrg(cellSpot);
         }
     }
@@ -191,7 +223,13 @@ class OrgWorld : public emp::World<Organism>
         {
             DeleteOrganism(diff_org_position);
             Predator *pred_ptr = dynamic_cast<Predator *>(given_org.Raw());
-            pred_ptr->increasePreyConsumed();
+            pred_ptr->increasePreyConsumed(); // Increases totalPreyConsumed variable in Predator organism
+
+            // int vision_width = pred_ptr->getWidthOfVision();
+            // int vision_height = pred_ptr->getHeightOfVision();
+            int eaten = pred_ptr->getTotalPreyConsumed();
+            total_prey_consumed = eaten;
+            // std::cout << "Count of total prey eaten:" << eaten << std::endl;
             given_org->hasEaten = true; // What is this for?
             // Data monitor: predator succuess
 
@@ -279,7 +317,7 @@ class OrgWorld : public emp::World<Organism>
     */
     void checkPredVisibleArea(int cellSpot)
     {
-        //std::cout << "Predator spot: " << cellSpot << std::endl;
+        // std::cout << "Predator spot: " << cellSpot << std::endl;
 
         // Grab Predator Pointer to call predator functions
         emp::Ptr<Organism> org_ptr = pop[cellSpot];
@@ -287,11 +325,13 @@ class OrgWorld : public emp::World<Organism>
 
         // Grab height and width for vision
         int heightOfVision = pred_ptr->getHeightOfVision();
-        int widthOfVision  = pred_ptr->getWidthOfVision();
+        vision_height = heightOfVision;
+        int widthOfVision = pred_ptr->getWidthOfVision();
+        vision_width = widthOfVision;
 
         // Create and reserve space for visible spots array
         emp::vector<size_t> visibleSpots;
-        visibleSpots.reserve( heightOfVision * widthOfVision );
+        visibleSpots.reserve(heightOfVision * widthOfVision);
 
         // Fill in visiblespots with function call
         visibleSpots = getVisibleArea(cellSpot, visibleSpots, heightOfVision, widthOfVision, &highlighted_cells);
@@ -302,20 +342,21 @@ class OrgWorld : public emp::World<Organism>
         Attack(visibleSpots, pop[cellSpot], attackSpots);
     }
 
-    emp::vector<size_t> checkAttackRange(int cellSpot){
+    emp::vector<size_t> checkAttackRange(int cellSpot)
+    {
         // All predator have same attack range, only vision changes
         int heightOfVision = 2;
-        int widthOfVision  = 3;
+        int widthOfVision = 3;
 
         emp::vector<size_t> attackSpots;
         attackSpots.reserve(heightOfVision * widthOfVision);
         attackSpots = getVisibleArea(cellSpot, attackSpots, heightOfVision, widthOfVision, &attackRange_cells);
 
-
         return attackSpots;
     }
 
-    emp::vector<size_t> getVisibleArea(int cellSpot, emp::vector<size_t> givenVector, int Height, int Width, std::set<size_t> *optionalVector = NULL){
+    emp::vector<size_t> getVisibleArea(int cellSpot, emp::vector<size_t> givenVector, int Height, int Width, std::set<size_t> *optionalVector = NULL)
+    {
         givenVector.reserve(Height * Width);
 
         // We need to figure out (col, row). GRID IS IN COLUMN-MAJOR ORDER
@@ -331,7 +372,7 @@ class OrgWorld : public emp::World<Organism>
         for (int h = 0; h < Height; h++)
         {
             // how many columns to include at this "depth"
-            int curWidth = std::max(1, Width - 2*h);
+            int curWidth = std::max(1, Width - 2 * h);
             int half = curWidth / 2;
 
             // move (h+1) steps *up* (north) = subtract from row0
@@ -351,7 +392,8 @@ class OrgWorld : public emp::World<Organism>
 
                 givenVector.push_back(target);
 
-                if (optionalVector != NULL){
+                if (optionalVector != NULL)
+                {
                     optionalVector->insert(target);
                 }
             }
@@ -376,7 +418,9 @@ class OrgWorld : public emp::World<Organism>
                 countOfOrgs++;
             }
         }
-        std::cout << "Count of organism visible: " << countOfOrgs << std::endl;
+
+        total_prey_seen += countOfOrgs;
+        // std::cout << "Count of total prey seen: " << total_prey_seen << std::endl;
         return countOfOrgs;
     }
 
@@ -400,7 +444,7 @@ class OrgWorld : public emp::World<Organism>
             if (random.GetDouble() < attackChance)
             {
                 int chosen = random.GetInt(targets.size());
-                std::cout << "Deleting organism at: " << targets[chosen] << std::endl;
+                // std::cout << "Deleting organism at: " << targets[chosen] << std::endl;
                 EatSpecies(organism, targets[chosen]);
             }
             else
@@ -422,14 +466,18 @@ class OrgWorld : public emp::World<Organism>
     }
 
     // Find closest prey for swarming behavior
-    int FindClosestPrey(int predator_index, const emp::vector<size_t>& visibleSpots) {
+    int FindClosestPrey(int predator_index, const emp::vector<size_t> &visibleSpots)
+    {
         int min_dist = std::numeric_limits<int>::max();
         int closest_prey_index = -1;
 
-        for (int spot : visibleSpots) {
-            if (IsOccupied(spot) && pop[spot]->SpeciesName() == "KFC") {
+        for (int spot : visibleSpots)
+        {
+            if (IsOccupied(spot) && pop[spot]->SpeciesName() == "KFC")
+            {
                 int dist = GetManhattanDistance(predator_index, spot);
-                if (dist < min_dist) {
+                if (dist < min_dist)
+                {
                     min_dist = dist;
                     closest_prey_index = spot;
                 }
@@ -440,7 +488,8 @@ class OrgWorld : public emp::World<Organism>
     }
 
     // Grab distance between two organisms
-    int GetManhattanDistance(int index1, int index2) {
+    int GetManhattanDistance(int index1, int index2)
+    {
         // Below converts Colum-Major grid into x,y thing
         int x1 = index1 / grid_h_boxes;
         int y1 = index1 % grid_h_boxes;
@@ -454,7 +503,8 @@ class OrgWorld : public emp::World<Organism>
     }
 
     // Moves Predators toward given prey spot
-    void MovePredatorTowards(int predator_index, int prey_index) {
+    void MovePredatorTowards(int predator_index, int prey_index)
+    {
         int col_pred = predator_index / grid_h_boxes;
         int row_pred = predator_index % grid_h_boxes;
 
@@ -465,17 +515,21 @@ class OrgWorld : public emp::World<Organism>
 
         // Check if prey is "north" considering toroidal wrap
         int vertical_dist = (row_pred - row_prey + grid_h_boxes) % grid_h_boxes;
-        
-        if (vertical_dist > 0 && vertical_dist <= grid_h_boxes / 2) {
+
+        if (vertical_dist > 0 && vertical_dist <= grid_h_boxes / 2)
+        {
             int target_row = (row_pred - 1 + grid_h_boxes) % grid_h_boxes;
 
-            if ((col_prey - col_pred + grid_w_boxes) % grid_w_boxes <= grid_w_boxes / 2) {
+            if ((col_prey - col_pred + grid_w_boxes) % grid_w_boxes <= grid_w_boxes / 2)
+            {
 
                 // Prefer moving toward the prey column-wise as well
-                if (col_prey < col_pred || (col_prey > col_pred && (col_prey - col_pred) > grid_w_boxes / 2)) {
+                if (col_prey < col_pred || (col_prey > col_pred && (col_prey - col_pred) > grid_w_boxes / 2))
+                {
                     moves.emplace_back((col_pred - 1 + grid_w_boxes) % grid_w_boxes, target_row); // top-left
                 }
-                if (col_prey > col_pred || (col_pred > col_prey && (col_pred - col_prey) > grid_w_boxes / 2)) {
+                if (col_prey > col_pred || (col_pred > col_prey && (col_pred - col_prey) > grid_w_boxes / 2))
+                {
                     moves.emplace_back((col_pred + 1) % grid_w_boxes, target_row); // top-right
                 }
             }
@@ -484,15 +538,18 @@ class OrgWorld : public emp::World<Organism>
         }
 
         // Attempt moves in preferred order
-        for (auto [new_col, new_row] : moves) {
+        for (auto [new_col, new_row] : moves)
+        {
             int new_index = new_col * grid_h_boxes + new_row;
 
-            if (!IsOccupied(new_index)) {
+            if (!IsOccupied(new_index))
+            {
                 auto org = ExtractOrganism(predator_index);
                 AddOrgAt(org, new_index);
                 return;
             }
-            else if (EatSpecies(pop[predator_index], new_index)) {
+            else if (EatSpecies(pop[predator_index], new_index))
+            {
                 return;
             }
         }
@@ -501,16 +558,20 @@ class OrgWorld : public emp::World<Organism>
     }
 
     // Grab spots of neighbors
-    emp::vector<size_t> GetNeighborIndices(int cell_index) {
+    emp::vector<size_t> GetNeighborIndices(int cell_index)
+    {
         emp::vector<size_t> neighbor_indices;
         // Convert linear index to (x, y) coordinates
         int x = cell_index / grid_w_boxes;
         int y = cell_index % grid_h_boxes;
 
-        for (int d_col = -1; d_col <= 1; ++d_col) {
-            for (int d_row = -1; d_row <= 1; ++d_row) {
+        for (int d_col = -1; d_col <= 1; ++d_col)
+        {
+            for (int d_row = -1; d_row <= 1; ++d_row)
+            {
                 // Skip the center cell itself
-                if (d_col == 0 && d_row == 0) continue;
+                if (d_col == 0 && d_row == 0)
+                    continue;
 
                 // Wrap around toroidally
                 int nx = (x + d_col + grid_w_boxes) % grid_w_boxes;
@@ -525,22 +586,27 @@ class OrgWorld : public emp::World<Organism>
     }
 
     // pick the open spot with the most adjacent prey
-    size_t MoveTowardPrey(size_t current_pos, const emp::vector<size_t>& candidates) {
+    size_t MoveTowardPrey(size_t current_pos, const emp::vector<size_t> &candidates)
+    {
         // We want the maximum number of nearby prey; start below any possible neighbor count.
         int max_adjacent_prey = -1;
         size_t best_spot = current_pos;
 
-        for (size_t spot : candidates) {
+        for (size_t spot : candidates)
+        {
             // Count how many prey are adjacent to this candidate spot
             int adjacent_prey_count = 0;
-            for (size_t neighbor : GetNeighborIndices(spot)) {
-                if (IsOccupied(neighbor) && pop[neighbor]->SpeciesName() == "KFC") {
+            for (size_t neighbor : GetNeighborIndices(spot))
+            {
+                if (IsOccupied(neighbor) && pop[neighbor]->SpeciesName() == "KFC")
+                {
                     ++adjacent_prey_count;
                 }
             }
 
             // If this spot has more adjacent prey, it’s a better swarm location
-            if (adjacent_prey_count > max_adjacent_prey) {
+            if (adjacent_prey_count > max_adjacent_prey)
+            {
                 max_adjacent_prey = adjacent_prey_count;
                 best_spot = spot;
             }
@@ -550,72 +616,77 @@ class OrgWorld : public emp::World<Organism>
     }
 
     // Prey disperse behavior function
-    size_t MoveAwayFromPrey(size_t current_pos, const emp::vector<size_t>& candidates) {
-    // We want the minimum number of nearby prey; start higher than any possible neighbor count.
-    int min_adjacent_prey = std::numeric_limits<int>::max();
-    size_t best_spot = current_pos;
+    size_t MoveAwayFromPrey(size_t current_pos, const emp::vector<size_t> &candidates)
+    {
+        // We want the minimum number of nearby prey; start higher than any possible neighbor count.
+        int min_adjacent_prey = std::numeric_limits<int>::max();
+        size_t best_spot = current_pos;
 
-    for (size_t spot : candidates) {
-        // Count how many prey are adjacent to this candidate spot
-        int adjacent_prey_count = 0;
-        for (size_t neighbor : GetNeighborIndices(spot)) {
-            if (IsOccupied(neighbor) && pop[neighbor]->SpeciesName() == "KFC") {
-                ++adjacent_prey_count;
+        for (size_t spot : candidates)
+        {
+            // Count how many prey are adjacent to this candidate spot
+            int adjacent_prey_count = 0;
+            for (size_t neighbor : GetNeighborIndices(spot))
+            {
+                if (IsOccupied(neighbor) && pop[neighbor]->SpeciesName() == "KFC")
+                {
+                    ++adjacent_prey_count;
+                }
+            }
+
+            // If this spot has fewer adjacent prey, it’s a better disperse location
+            if (adjacent_prey_count < min_adjacent_prey)
+            {
+                min_adjacent_prey = adjacent_prey_count;
+                best_spot = spot;
             }
         }
 
-        // If this spot has fewer adjacent prey, it’s a better disperse location
-        if (adjacent_prey_count < min_adjacent_prey) {
-            min_adjacent_prey = adjacent_prey_count;
-            best_spot = spot;
-        }
+        return best_spot;
     }
-
-    return best_spot;
-}
-
-
 
     // Everything for gathering data
-    emp::DataMonitor<int> &GetOrgCountDataNode()
+
+    emp::DataMonitor<int> &GetOrgPreyConsumedDataNode()
     {
-        if (!data_node_visibility)
+        if (!data_prey_consumed)
         {
-            data_node_visibility.New();
-            OnUpdate([this](size_t)
+            data_prey_consumed.New();
+            OnUpdate([this](size_t update)
                      {
-    data_node_visibility -> Reset();
-    for (size_t i = 0; i < pop.size(); i++)
-        if(IsOccupied(i))
-        data_node_count->AddDatum((1)); });
+                         data_prey_consumed->Reset();
+                         data_prey_consumed->AddDatum(total_prey_consumed); });
         }
-        return *data_node_count;
+        return *data_prey_consumed;
     }
 
-    emp::DataMonitor<double, emp::data::Histogram> &GetOrgVisibilityDataNode()
+    emp::DataMonitor<int> &GetOrgPreySeenDataNode()
     {
-        if (!data_node_visibility)
+        if (!data_prey_seen)
         {
-            data_node_visibility.New();
-            OnUpdate([this](size_t)
+            data_prey_seen.New();
+            OnUpdate([this](size_t update)
                      {
-          data_node_visibility->Reset();
-          for (size_t i = 0; i< pop.size(); i++)
-          if (IsOccupied(i))
-              data_node_visibility->AddDatum(0); });
+            data_prey_seen->Reset();
+            data_prey_seen->AddDatum(total_prey_seen); });
         }
-        data_node_visibility->SetupBins(0.0, 1.1, 11);
-        return *data_node_visibility;
+        return *data_prey_seen;
     }
 
     emp::DataFile &SetupOrgFile(const std::string &filename)
     {
         auto &file = SetupFile(filename);
-        auto &node1 = GetOrgCountDataNode();
-        auto &node = GetOrgVisibilityDataNode();
+
+        auto &node1 = GetOrgPreySeenDataNode();
+        auto &node2 = GetOrgPreyConsumedDataNode();
+
         file.AddVar(update, "update", "Update");
-        file.AddTotal(node1, "count", "Total number of organisms");
-        file.AddHistBin(node, 0, "visibiliyt", "Count for histogram bin visibility");
+        file.AddTotal(node1, "prey_seen", "Total Prey Seen by Predators");
+        file.AddTotal(node2, "prey_consumed", "Total Prey Consumed");
+
+        file.AddVar(vision_size, "predator_vision", "Vision size");
+        file.AddVar(vision_height, "predator_vision_height", "Vision height");
+        file.AddVar(vision_width, "predator_vision_width", "Vision width");
 
         file.PrintHeaderKeys();
 

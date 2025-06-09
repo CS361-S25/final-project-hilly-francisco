@@ -8,22 +8,49 @@
 #include "emp/math/Random.hpp"
 #include "emp/config/ArgManager.hpp"
 
+#include "ConfigSetup.h"
 #include "World.h"
 #include "KFC.h"
 #include "Predator.h"
 
-// This is the main function for the NATIVE version of this project.
+// Instance variables for OrgWorld
+emp::Random *random_ptr;
+OrgWorld *world;
+MyConfigType config;
 
-EMP_BUILD_CONFIG(MyConfigType,
-                 VALUE(SEED, int, 10, "What value should the random seed be?"),
-                 VALUE(VISIBILITY, int, 5, "What visibiilyt should the starting organism have?"),
-                 VALUE(PREYCOUNT, int, 30, "How many starting prey should there be?"),
-                 VALUE(FILE_PATH, std::string, "", "Output file path"),
-                 VALUE(FILE_NAME, std::string, "_data.dat", "Root output file name"))
+// This is the main function for the NATIVE version of this project.
+void CreateandAddKFC(emp::Random &ran, int num)
+{
+    for (int i = 0; i < num; i++)
+    {
+        KFC *KFC_org = new KFC(&ran, 400);
+        KFC_org->setBehavior(config.PREY_BEHAVIOR());
+        world->AddOrgAt(KFC_org, ran.GetInt(0, world->GetSize()));
+    }
+}
+
+void CreateandAddPredator(emp::Random &ran, int num)
+{
+    for (int i = 0; i < num; i++)
+    {
+        int randomWidthVision = 1 + 2 * ran.GetInt(1, 13);
+        int randomHeightVision = ran.GetInt(1, 10);
+        Predator *Predator_org = new Predator(&ran, 800, randomHeightVision, randomWidthVision);
+        world->AddOrgAt(Predator_org, 410);
+        // 152 for grid size of 20 x 20
+        int vision_size = randomWidthVision * randomHeightVision;
+        std::cout << "Vision Size: " << vision_size << std::endl; // This isn't the actual vision because of triagnles
+    }
+}
 
 int main(int argc, char *argv[])
 {
-    MyConfigType config;
+    // Should I add config here?
+
+    int num_h_boxes = 40;
+    int num_w_boxes = 40;
+    const double RECT_SIDE = 25; // I think I dont need this
+    int sim_count = 0;           // Counts number of steps we've taken
 
     bool success = config.Read("MySettings.cfg");
     if (!success)
@@ -41,42 +68,29 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    // Build the simulations
+    // Give values to your Orgworld
+    random_ptr = new emp::Random(config.SEED_NUM());
+    world = new OrgWorld(*random_ptr);
+    world->Resize(num_h_boxes, num_w_boxes);
 
-    for (size_t i = 0; i < 5; i++)
+    world->SetupOrgFile(config.FILE_PATH() + "Org_Vals" + std::to_string(config.SEED_NUM()) + config.FILE_NAME());
+
+    // Run the simulation
+    for (int update = 0; update < 2000; update++)
     {
-        emp::Random random(5);
-        OrgWorld world{random};
-        world.Resize(10, 10);
-
-        // Set PreyCount and Visibility
-        int PreyCount = config.PREYCOUNT();
-        int Visibilty = config.VISIBILITY();
-        int VisionHeight = 4;
-        int VisionWidth = 1;
-
-        // Inject KFC Organisms (Can I use the same random variable here?)
-        for (int x = 0; x < PreyCount; x++)
+        // Every 500 stepps we get a new prey
+        if (sim_count % 500 == 0)
         {
-            KFC *KFC_org = new KFC(&random, 400);
-            world.Inject(*KFC_org);
+            std::cout << "New Predator" << std::endl;
+            world->Reset();
+
+            world->SetPopStruct_Grid(num_w_boxes, num_h_boxes);
+            world->Resize(num_h_boxes, num_w_boxes);
+
+            CreateandAddKFC(*random_ptr, config.PREY_POP_SIZE());
+            CreateandAddPredator(*random_ptr, config.PRED_POP_SIZE());
         }
-
-        // Inject Predator Organisms
-        Predator *predator_org = new Predator(&random, 800, VisionHeight, VisionWidth);
-        world.Inject(*predator_org);
-
-        // Do 100 updates
-        for (int update = 0; update < 100; update++)
-        {
-            world.Update();
-        }
-
-        // Make the Data File
-        world.SetupOrgFile(config.FILE_PATH() + "Org_Vals" + std::to_string(config.SEED()) + config.FILE_NAME());
-
-        // Before the next update, increase vision
-        VisionHeight = +1;
-        VisionWidth = +2;
+        world->Update();
+        sim_count += 1;
     }
 }

@@ -10,17 +10,17 @@
 class Predator : public Organism
 {
 
-    private:
-        bool has_target = false;
-        size_t chase_target;
+private:
+    bool has_target = false;
+    size_t chase_target;
 
-    public:
-        int totalPreyConsumed = 0;
-        // Must always be pos
-        int heightOfVision = 3;
+public:
+    int totalPreyConsumed = 0;
+    // Must always be pos
+    int heightOfVision = 3;
 
-        // Must be pos and odd (clean pyramids that way)
-        int widthOfVision = 5;
+    // Must be pos and odd (clean pyramids that way)
+    int widthOfVision = 5;
 
     Predator(emp::Ptr<emp::Random> _random, double _points = 0.0, int _heightOfVision = 3, int _widthOfVision = 5)
         : Organism(_random, _points),
@@ -41,24 +41,28 @@ class Predator : public Organism
 
     int getWidthOfVision() { return widthOfVision; }
     int getTotalPreyConsumed() { return totalPreyConsumed; }
-    void increasePreyConsumed() { totalPreyConsumed = +1; }
+    void increasePreyConsumed() { totalPreyConsumed = totalPreyConsumed + 1; }
 
-        void SetChaseTarget(size_t pos) {
+    void SetChaseTarget(size_t pos)
+    {
         chase_target = pos;
         has_target = true;
-        }
+    }
 
-        void ClearChaseTarget() {
-            has_target = false;
-        }
+    void ClearChaseTarget()
+    {
+        has_target = false;
+    }
 
-        bool HasTarget() const {
-            return has_target;
-        }
+    bool HasTarget() const
+    {
+        return has_target;
+    }
 
-        size_t GetChaseTarget() const {
-            return chase_target;
-        }
+    size_t GetChaseTarget() const
+    {
+        return chase_target;
+    }
 
     /*
         Input: Organism class

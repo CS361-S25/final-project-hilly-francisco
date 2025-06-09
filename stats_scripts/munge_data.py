@@ -1,24 +1,29 @@
 folder = ''
 
-treatment_postfixes = ['0.0', '0.5', '1.0']
 reps = range(10, 21)
-header = "uid treatment rep update coop count hist_0\n"
+header = "rep update prey_seen prey_consumed predator_vision predator_vision_height predator_vision_width\n"
 
 outputFileName = "munged_basic.dat"
 
 outFile = open(outputFileName, 'w')
 outFile.write(header)
 
-for t in treatment_postfixes:
-    for r in reps:
-        fname = folder +"Org_Vals" + str(r) + "SP" + t + ".data"
-        uid = t + "_" + str(r)
+for r in reps:
+        fname = folder +"Org_Vals" + str(r) + "SP" + str(r) + ".data"
+        print("Looking for file:", fname)
         curFile = open(fname, 'r')
         for line in curFile:
             if (line[0] != "u"):
                 splitline = line.split(',')
-                outstring1 = "{} {} {} {} {} {} {}\n".format(uid, t, r, splitline[0], splitline[1], splitline[2], \
-                splitline[3])
+                outstring1 = "{} {} {} {} {} {} {}\n".format(
+                    r,
+                    splitline[0],  # update
+                    splitline[1],  # prey_seen
+                    splitline[2],  # prey_consumed
+                    splitline[3],  # predator_vision
+                    splitline[4],  # predator_vision_height
+                    splitline[5]   # predator_vision_width
+                )
                 outFile.write(outstring1)
         curFile.close()
 outFile.close()

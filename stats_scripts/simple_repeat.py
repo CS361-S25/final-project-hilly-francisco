@@ -2,7 +2,6 @@
 
 directory = "Example/"
 seeds = range(10, 21)
-start_probs = [0.0, 0.5, 1.0]
 
 import subprocess
 
@@ -22,8 +21,7 @@ print("Copying MySettings.cfg to "+directory)
 cmd("cp MySettings.cfg "+directory)
 
 for a in seeds:
-    for b in start_probs:
-        command_str = './plot_lab -SEED '+str(a)+' -START_PROB '+str(b)+' -FILE_PATH '+directory+' -FILE_NAME SP'+str(b)+'.data'
+    command_str = './native_project -SEED_NUM '+str(a)+' -FILE_PATH '+directory+' -FILE_NAME SP'+str(a)+'.data'
         
-        print(command_str)
-        cmd(command_str)
+    print(command_str)
+    cmd(command_str)

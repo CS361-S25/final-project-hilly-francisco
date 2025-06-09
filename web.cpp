@@ -32,9 +32,9 @@ class AEAnimator : public emp::web::Animate
     const double RECT_SIDE = 25;
     const double width{num_w_boxes * RECT_SIDE};
     const double height{num_h_boxes * RECT_SIDE};
-    int sim_count = 0;
+    int sim_count = 0; // Counts number of steps we've taken
 
-    emp::Random  *random;
+    emp::Random *random;
     OrgWorld *world;
 
     // const int num_of_KFC = 50;
@@ -48,13 +48,13 @@ public:
         auto specs = emp::ArgManager::make_builtin_specs(&config);
         emp::ArgManager am(emp::web::GetUrlParams(), specs);
         am.UseCallbacks();
-        if (am.HasUnused()) std::exit(EXIT_FAILURE);
+        if (am.HasUnused())
+            std::exit(EXIT_FAILURE);
 
         random = new emp::Random(config.SEED_NUM());
         world = new OrgWorld(*random);
         world->SetPopStruct_Grid(num_w_boxes, num_h_boxes);
         world->Resize(num_h_boxes, num_w_boxes);
-
 
         // shove canvas into the div
         // along with a control button
@@ -75,7 +75,9 @@ public:
     void DoFrame() override
     {
 
-        if (sim_count % 500 == 0){
+        // Every 500 stepps we get a new prey
+        if (sim_count % 500 == 0)
+        {
             world->Reset();
 
             world->SetPopStruct_Grid(num_w_boxes, num_h_boxes);
@@ -122,21 +124,21 @@ public:
             }
         }
 
-
-        for (int spot : world->highlighted_cells){
-            //std::cout << "The spot is " << spot << std::endl;
-            int x = spot / num_h_boxes;   // integer division
+        for (int spot : world->highlighted_cells)
+        {
+            // std::cout << "The spot is " << spot << std::endl;
+            int x = spot / num_h_boxes; // integer division
             int y = spot % num_h_boxes;
             canvas.Rect(x * RECT_SIDE, y * RECT_SIDE, RECT_SIDE, RECT_SIDE, "rgba(0, 0, 0, 0.3)", "black");
         }
 
-        for (int spot : world->attackRange_cells){
-            //std::cout << "The spot is " << spot << std::endl;
-            int x = spot / num_h_boxes;   // integer division
+        for (int spot : world->attackRange_cells)
+        {
+            // std::cout << "The spot is " << spot << std::endl;
+            int x = spot / num_h_boxes; // integer division
             int y = spot % num_h_boxes;
             canvas.Rect(x * RECT_SIDE, y * RECT_SIDE, RECT_SIDE, RECT_SIDE, "rgba(255, 255, 0, 0.3)", "black");
         }
-
     }
 
     /*
@@ -150,12 +152,13 @@ public:
         CreateandAddTestLowPredator();
     }
 
-        /*
-        Inputs: None
-        Outputs: None
-        Purpose: Utility function creating configuration panel for GUI
-    */
-    void SetConfigPanel(){
+    /*
+    Inputs: None
+    Outputs: None
+    Purpose: Utility function creating configuration panel for GUI
+*/
+    void SetConfigPanel()
+    {
         emp::prefab::ConfigPanel config_panel(config);
         settings << config_panel;
         config_panel.SetRange("PRED_SIZE", "1", "10");
@@ -207,40 +210,43 @@ public:
         }
     }
 
-    void CreateandAddTestPredator() {
-            int randomWidthVision = 9;
-            int randomHeightVision = 5;
-            Predator *Predator_org = new Predator(random, 800, randomHeightVision, randomWidthVision);
-            world->AddOrgAt(Predator_org, 410);
+    void CreateandAddTestPredator()
+    {
+        int randomWidthVision = 9;
+        int randomHeightVision = 5;
+        Predator *Predator_org = new Predator(random, 800, randomHeightVision, randomWidthVision);
+        world->AddOrgAt(Predator_org, 410);
     };
 
-    void CreateandAddTestLowPredator() {
-            
+    void CreateandAddTestLowPredator()
+    {
+
         int randomWidthVision = 3;
         int randomHeightVision = 6;
         Predator *Predator_org = new Predator(random, 800, randomHeightVision, randomWidthVision);
         world->AddOrgAt(Predator_org, 410);
     };
 
-    void InsertText() {
+    void InsertText()
+    {
         doc << canvas;
         doc << GetToggleButton("Toggle");
         doc << GetStepButton("Step");
 
         doc << "<h2> Current Status </h2>"
-                "In the config, only prey population & seed work! "
-                "Some more text. <br>";
+               "In the config, only prey population & seed work! "
+               "Some more text. <br>";
 
         doc << "<h2> Simulation </h2>"
-                "This Simulation attempts to show the co-evolution of predator and prey organisms' behavior and morphology. "
-                "Predators are given a set range of visible area they can see determined by given vision width and height. "
-                "Prey in return move around the grid in two distinct styles, swarming and dispersal."
-                " <br>";
+               "This Simulation attempts to show the co-evolution of predator and prey organisms' behavior and morphology. "
+               "Predators are given a set range of visible area they can see determined by given vision width and height. "
+               "Prey in return move around the grid in two distinct styles, swarming and dispersal."
+               " <br>";
 
         doc << "<h2> Results: </h2>";
-        doc << "<strong> Predator Confusion Mechanism </strong>: A predator's liklihood of successfully hunting prey is determined by the number of prey they can see. The more prey in it's field of view, results in a lower successful attack chance. <br>" 
-                "<b> Narrow vision leads to dispersal </b>: With the PCM in mind, narrow predator vision results in dispersal prey behavior being best for prey survival.<br>"
-                "<strong> Broader vision leads to swarming </strong>: In turn, broader predator vision gives leeway to swarming behavior among prey for better survivability. <br>";
+        doc << "<strong> Predator Confusion Mechanism </strong>: A predator's liklihood of successfully hunting prey is determined by the number of prey they can see. The more prey in it's field of view, results in a lower successful attack chance. <br>"
+               "<b> Narrow vision leads to dispersal </b>: With the PCM in mind, narrow predator vision results in dispersal prey behavior being best for prey survival.<br>"
+               "<strong> Broader vision leads to swarming </strong>: In turn, broader predator vision gives leeway to swarming behavior among prey for better survivability. <br>";
     };
 };
 
