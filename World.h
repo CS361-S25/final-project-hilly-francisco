@@ -32,6 +32,7 @@ class OrgWorld : public emp::World<Organism>
 public:
     int grid_w_boxes = 40;
     int grid_h_boxes = 40;
+    float camouflage_value = 0.1;
 
     // grab org at population index
     const pop_t &GetPopulation() { return pop; }
@@ -47,7 +48,7 @@ public:
 
     ~OrgWorld() {}
 
-    void Update()
+    void Update() 
     {
 
         double pointsPerUpdate = 0;
@@ -125,7 +126,7 @@ public:
         Predator *pred_ptr = dynamic_cast<Predator *>(pop[cellSpot].Raw());
         visibleSpots = getVisibleArea(cellSpot, {}, pred_ptr->getHeightOfVision(), pred_ptr->getWidthOfVision());
         vision_size = visibleSpots.size();
-
+        
         // Find prey if any
         int closest = FindClosestPrey(cellSpot, visibleSpots);
 
@@ -178,8 +179,8 @@ public:
         {
             auto org = ExtractOrganism(cellSpot);
             AddOrgAt(org, best_spot);
-        }
-
+        } 
+        
         else
         {
             MoveOrg(cellSpot);
@@ -336,10 +337,37 @@ public:
         // Fill in visiblespots with function call
         visibleSpots = getVisibleArea(cellSpot, visibleSpots, heightOfVision, widthOfVision, &highlighted_cells);
 
-        // Give visible spots to necessary functions
-        getVisibleOrganismCount(visibleSpots);
+        // Get all prey in sight
+        emp::vector<size_t> preyinVision = getPreyInVsion(visibleSpots);
+
+        // Build a new list of _actually_ spotted prey
+        emp::vector<size_t> spottedPrey;
+        spottedPrey.reserve(preyinVision.size());
+
+        for (size_t spot : preyinVision) {
+
+            emp::Ptr<Organism> org_ptr = pop[spot];
+            KFC *prey_ptr = dynamic_cast<KFC *>(org_ptr.Raw());
+
+            // Camouflage roll:
+            if (random.GetDouble() < prey_ptr->getCamouflageVlaue()) 
+            {
+                // successful camouflage → reward
+                std::cout << "hid succesfully adding pts to camo value" << std::endl;
+                prey_ptr->addCamouflage(camouflage_value);
+            } 
+            else 
+            {
+                // failed camouflage → mark and queue for attack
+                prey_ptr->setSpotted(true);
+                spottedPrey.push_back(spot);
+            }
+        }
+
+        // Now attack only those prey that actually failed their camouflage check
+        float attackChance = getAttackChance(spottedPrey.size());
         emp::vector<size_t> attackSpots = checkAttackRange(cellSpot);
-        Attack(visibleSpots, pop[cellSpot], attackSpots);
+        Attack(spottedPrey, pop[cellSpot], attackSpots);
     }
 
     emp::vector<size_t> checkAttackRange(int cellSpot)
@@ -427,26 +455,24 @@ public:
     // Predator-only attack function
     void Attack(const emp::vector<size_t> &visibleSpots, emp::Ptr<Organism> organism, emp::vector<size_t> attackSpots)
     {
-        emp::vector<size_t> targets;
-        // Get spots with prey in them
-        for (size_t spot : attackSpots)
-        {
-            if (IsOccupied(spot))
-            {
-                targets.push_back(spot);
-            }
-        }
+        emp::vector<size_t> targets = getPreyInVsion(visibleSpots);
+        emp::vector<size_t> spottedPrey = getSpottedPrey(targets);
+
+        //std::cout << "you are not crazy1" << std::endl;
 
         // If at least one prey in attack range
         if (!targets.empty())
         {
-            float attackChance = getAttackChance(targets.size());
+            //std::cout << "you are not crazy" << std::endl;
+            float attackChance = getAttackChance(spottedPrey.size());
+            
+            int chosen = random.GetInt(targets.size());
             if (random.GetDouble() < attackChance)
             {
-                int chosen = random.GetInt(targets.size());
-                // std::cout << "Deleting organism at: " << targets[chosen] << std::endl;
+                //std::cout << "Prey failed camo test and attack chance" << std::endl;
                 EatSpecies(organism, targets[chosen]);
             }
+
             else
             {
                 // Attack failed due to probability check
@@ -455,12 +481,54 @@ public:
         }
     }
 
+    // Get prey in predator vision
+    emp::vector<size_t> getPreyInVsion(emp::vector<size_t> visibleArea)
+    {
+        emp::vector<size_t> targets;
+
+        // Get spots with prey in them
+        for (size_t spot : visibleArea)
+        {
+            if (IsOccupied(spot))
+            {
+                targets.push_back(spot);
+            }
+        }
+
+        return targets;
+    }
+
+    // Get spotted prey (that failed camo check)
+    emp::vector<size_t> getSpottedPrey(emp::vector<size_t> preyInVision)
+    {
+        emp::vector<size_t> targets;
+
+        // Get spots with prey in them
+        for (size_t spot : preyInVision)
+        {
+            if (IsOccupied(spot))
+            {
+                emp::Ptr<Organism> org_ptr = pop[spot];
+                KFC *prey_ptr = dynamic_cast<KFC *>(org_ptr.Raw());
+
+                if (!prey_ptr->checkCamo())
+                {
+                    //std::cout << "prey failed camo test" << std::endl;
+                    targets.push_back(spot);
+                }
+                // else nothing
+            }
+        }
+
+        return targets;
+    }
+    
     // Predator Confusion Mechanism
     float getAttackChance(int visibleTargets)
     {
         if (visibleTargets <= 0)
             return 0.0f;
-        int chanceOfAttack = 1.0f / visibleTargets;
+        float chanceOfAttack = 1.0f / visibleTargets;
 
         return chanceOfAttack;
     }
@@ -515,7 +583,7 @@ public:
 
         // Check if prey is "north" considering toroidal wrap
         int vertical_dist = (row_pred - row_prey + grid_h_boxes) % grid_h_boxes;
-
+        
         if (vertical_dist > 0 && vertical_dist <= grid_h_boxes / 2)
         {
             int target_row = (row_pred - 1 + grid_h_boxes) % grid_h_boxes;
@@ -618,32 +686,67 @@ public:
     // Prey disperse behavior function
     size_t MoveAwayFromPrey(size_t current_pos, const emp::vector<size_t> &candidates)
     {
-        // We want the minimum number of nearby prey; start higher than any possible neighbor count.
-        int min_adjacent_prey = std::numeric_limits<int>::max();
-        size_t best_spot = current_pos;
+    // We want the minimum number of nearby prey; start higher than any possible neighbor count.
+    int min_adjacent_prey = std::numeric_limits<int>::max();
+    size_t best_spot = current_pos;
 
         for (size_t spot : candidates)
         {
-            // Count how many prey are adjacent to this candidate spot
-            int adjacent_prey_count = 0;
+        // Count how many prey are adjacent to this candidate spot
+        int adjacent_prey_count = 0;
             for (size_t neighbor : GetNeighborIndices(spot))
             {
                 if (IsOccupied(neighbor) && pop[neighbor]->SpeciesName() == "KFC")
                 {
-                    ++adjacent_prey_count;
-                }
-            }
-
-            // If this spot has fewer adjacent prey, it’s a better disperse location
-            if (adjacent_prey_count < min_adjacent_prey)
-            {
-                min_adjacent_prey = adjacent_prey_count;
-                best_spot = spot;
+                ++adjacent_prey_count;
             }
         }
 
-        return best_spot;
+        // If this spot has fewer adjacent prey, it’s a better disperse location
+            if (adjacent_prey_count < min_adjacent_prey)
+            {
+            min_adjacent_prey = adjacent_prey_count;
+            best_spot = spot;
+        }
     }
+
+    return best_spot;
+}
+
+    // // Prey Set Seen based on if they pass camo test
+    // void setPreySpotted(emp::vector<size_t> preySpotted)
+    // {
+    //     for (size_t prey : preySpotted)
+    //     {
+    //         // Grab Predator Pointer to call predator functions
+    //         emp::Ptr<Organism> org_ptr = pop[prey];
+    //         KFC *prey_ptr = dynamic_cast<KFC *>(org_ptr.Raw());
+
+    //         // Will prey successfully dodge predator vision?
+    //         if (random.GetDouble() < prey_ptr->camouflage_value)
+    //         {
+    //             continue;
+    //         }
+    //         else
+    //         {
+    //             prey_ptr->setSpotted(true);
+    //         }
+    //     }
+    // }
+    
+    // // Prey set/add camoflauge
+    // void setPreyCamoValue(emp::vector<size_t> preySpotted)
+    // {
+    //     for (size_t prey : preySpotted)
+    //     {
+    //         // Grab Predator Pointer to call predator functions
+    //         emp::Ptr<Organism> org_ptr = pop[prey];
+    //         KFC *prey_ptr = dynamic_cast<KFC *>(org_ptr.Raw());
+
+    //         // set prey as spotted
+    //         prey_ptr->addCamoflauge(camouflage_value);
+    //     }
+    // }
 
     // Everything for gathering data
 
@@ -693,4 +796,5 @@ public:
         return file;
     }
 };
+
 #endif

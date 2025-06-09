@@ -13,12 +13,18 @@ class KFC : public Organism
 public:
 
     bool prey_swarm_mode = false;
+    bool spotted = false;
+    float camouflage_value = 0.3;
 
     KFC(emp::Ptr<emp::Random> _random, double _points = 0.0)
         : Organism(_random, _points) {}
 
 
     void setBehavior(bool behavior){prey_swarm_mode = behavior;}
+    void setSpotted(bool spotted){spotted = spotted;}
+    void addCamouflage(float camo){camouflage_value += camo;}
+    bool checkCamo(){return spotted;}
+    float getCamouflageVlaue() {return camouflage_value;}
     
     /*
         Input: Void
