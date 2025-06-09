@@ -77,7 +77,8 @@ public:
 
         // Every 500 stepps we get a new prey
         if (sim_count % 500 == 0)
-        {
+        {   
+            world->step_counter = 0;
             float predFitness = world->getPredatorFitness();
             std::cout << "Here is the predators fitness ->" << predFitness << std::endl;
             world->Reset();

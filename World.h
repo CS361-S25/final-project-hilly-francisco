@@ -34,6 +34,7 @@ public:
     int grid_h_boxes = 40;
     float camouflage_value = 0.1;
     int total_prey_start = 100;
+    int step_counter = 0;
 
 
 
@@ -53,6 +54,7 @@ public:
 
     void Update() 
     {
+        step_counter++;
 
         double pointsPerUpdate = 0;
 
@@ -301,19 +303,11 @@ public:
         emp::WorldPosition newPosition = GetRandomNeighborPos(pos);
         emp::Ptr<Organism> extracted_org = ExtractOrganism(pos);
 
-        if (!IsOccupied(newPosition))
-        {
-            AddOrgAt(extracted_org, newPosition);
-        }
-
-        else
-        {
-            bool wasEaten = EatSpecies(extracted_org, newPosition.GetIndex());
-
-            if (!wasEaten)
-            {
-                AddOrgAt(extracted_org, pos);
-            }
+        if (!IsOccupied(newPosition)) {
+        AddOrgAt(extracted_org, newPosition);
+        } else {
+        // collisions don’t trigger eating any more—just stay
+        AddOrgAt(extracted_org, pos);
         }
     }
 
@@ -459,33 +453,37 @@ public:
     }
 
     // Predator-only attack function
-    void Attack(const emp::vector<size_t> &visibleSpots, emp::Ptr<Organism> organism, emp::vector<size_t> attackSpots)
-    {
-        emp::vector<size_t> targets = getPreyInVsion(visibleSpots);
-        emp::vector<size_t> spottedPrey = getSpottedPrey(targets);
-
-        //std::cout << "you are not crazy1" << std::endl;
-
-        // If at least one prey in attack range
-        if (!targets.empty())
+    void Attack(const emp::vector<size_t> &visibleSpots,
+        emp::Ptr<Organism> org_ptr,
+        const emp::vector<size_t> & /*attackSpots—no longer needed*/)
         {
-            //std::cout << "you are not crazy" << std::endl;
-            float attackChance = getAttackChance(spottedPrey.size());
-            
-            int chosen = random.GetInt(targets.size());
-            if (random.GetDouble() < attackChance)
-            {
-                //std::cout << "Prey failed camo test and attack chance" << std::endl;
-                EatSpecies(organism, targets[chosen]);
+            // 1) Only predators can attack
+            Predator *pred = dynamic_cast<Predator*>(org_ptr.Raw());
+            if (!pred) return;
+
+            // 2) Handling‐time cooldown
+            if (!pred->CanAttack(step_counter)) return;
+
+            // 3) Build list of attackable prey
+            emp::vector<size_t> targets = getSpottedPrey(getPreyInVsion(visibleSpots));
+            if (targets.empty()) {
+                // No prey to hit, but we still incur the attempt delay
+                pred->NoteAttack(step_counter);
+                return;
             }
 
-            else
-            {
-                // Attack failed due to probability check
-                std::cout << "Attack failed due to probability." << std::endl;
+            // 4) Do the probability roll exactly as before
+            int idx = random.GetInt((int)targets.size());
+            float attackChance = getAttackChance((int)targets.size());
+            if (random.GetDouble() < attackChance) {
+                EatSpecies(org_ptr, targets[idx]);
+            } else {
+                std::cout << "Attack failed due to probability.\n";
             }
+
+            // 5) Start the handling‐time clock now
+            pred->NoteAttack(step_counter);
         }
-    }
 
     // Get prey in predator vision
     emp::vector<size_t> getPreyInVsion(emp::vector<size_t> visibleArea)
@@ -620,10 +618,6 @@ public:
             {
                 auto org = ExtractOrganism(predator_index);
                 AddOrgAt(org, new_index);
-                return;
-            }
-            else if (EatSpecies(pop[predator_index], new_index))
-            {
                 return;
             }
         }
