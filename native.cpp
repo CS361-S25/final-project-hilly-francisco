@@ -24,7 +24,7 @@ void CreateandAddKFC(emp::Random &ran, int num)
     for (int i = 0; i < num; i++)
     {
         KFC *KFC_org = new KFC(&ran, 400);
-        KFC_org->setBehavior(config.PREY_BEHAVIOR());
+        KFC_org->setBehavior(0);
         world->AddOrgAt(KFC_org, ran.GetInt(0, world->GetSize()));
     }
 }
@@ -41,6 +41,11 @@ void CreateandAddPredator(emp::Random &ran, int num)
         int vision_size = randomWidthVision * randomHeightVision;
         std::cout << "Vision Size: " << vision_size << std::endl; // This isn't the actual vision because of triagnles
     }
+}
+
+int CalculateFitness()
+{
+    // Steps/number of prey eaten
 }
 
 int main(int argc, char *argv[])
@@ -76,21 +81,15 @@ int main(int argc, char *argv[])
     world->SetupOrgFile(config.FILE_PATH() + "Org_Vals" + std::to_string(config.SEED_NUM()) + config.FILE_NAME());
 
     // Run the simulation
-    for (int update = 0; update < 2000; update++)
+    world->SetPopStruct_Grid(num_w_boxes, num_h_boxes);
+    world->Resize(num_h_boxes, num_w_boxes);
+
+    CreateandAddKFC(*random_ptr, config.PREY_POP_SIZE());
+    CreateandAddPredator(*random_ptr, config.PRED_POP_SIZE());
+    for (int update = 0; update < 155; update++)
     {
-        // Every 500 stepps we get a new prey
-        if (sim_count % 500 == 0)
-        {
-            std::cout << "New Predator" << std::endl;
-            world->Reset();
-
-            world->SetPopStruct_Grid(num_w_boxes, num_h_boxes);
-            world->Resize(num_h_boxes, num_w_boxes);
-
-            CreateandAddKFC(*random_ptr, config.PREY_POP_SIZE());
-            CreateandAddPredator(*random_ptr, config.PRED_POP_SIZE());
-        }
         world->Update();
-        sim_count += 1;
     }
+
+    world->Reset();
 }

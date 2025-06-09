@@ -23,11 +23,15 @@ class OrgWorld : public emp::World<Organism>
     emp::Ptr<emp::DataMonitor<int>> data_vision_size;
     emp::Ptr<emp::DataMonitor<int>> data_vision_width;
     emp::Ptr<emp::DataMonitor<int>> data_vision_height;
+    emp::Ptr<emp::DataMonitor<float>> data_attack_efficiency;
     int total_prey_seen;
     int total_prey_consumed;
     int vision_size;
     int vision_width;
     int vision_height;
+    int total_prey_num;
+    float attack_efficiency;
+    float fitness = 0;
 
 public:
     int grid_w_boxes = 40;
@@ -441,6 +445,8 @@ public:
         if (!targets.empty())
         {
             float attackChance = getAttackChance(targets.size());
+            attack_efficiency = attackChance;
+
             if (random.GetDouble() < attackChance)
             {
                 int chosen = random.GetInt(targets.size());
@@ -450,7 +456,7 @@ public:
             else
             {
                 // Attack failed due to probability check
-                std::cout << "Attack failed due to probability." << std::endl;
+                // std::cout << "Attack failed due to probability." << std::endl;
             }
         }
     }
@@ -460,7 +466,7 @@ public:
     {
         if (visibleTargets <= 0)
             return 0.0f;
-        int chanceOfAttack = 1.0f / visibleTargets;
+        float chanceOfAttack = 1.0f / visibleTargets;
 
         return chanceOfAttack;
     }
@@ -647,6 +653,12 @@ public:
 
     // Everything for gathering data
 
+    int GetPreySize()
+    {
+        int pop_size = GetPopulation().size();
+        return pop_size - 1;
+    }
+
     emp::DataMonitor<int> &GetOrgPreyConsumedDataNode()
     {
         if (!data_prey_consumed)
@@ -673,12 +685,26 @@ public:
         return *data_prey_seen;
     }
 
+    emp::DataMonitor<float> &GetOrgAttackEfficiencyDataNode()
+    {
+        if (!data_attack_efficiency)
+        {
+            data_attack_efficiency.New();
+            OnUpdate([this](size_t update)
+                     {
+                         data_attack_efficiency->Reset();
+                         data_attack_efficiency->AddDatum(attack_efficiency); });
+        }
+        return *data_attack_efficiency;
+    }
+
     emp::DataFile &SetupOrgFile(const std::string &filename)
     {
         auto &file = SetupFile(filename);
 
         auto &node1 = GetOrgPreySeenDataNode();
         auto &node2 = GetOrgPreyConsumedDataNode();
+        auto &node3 = GetOrgAttackEfficiencyDataNode();
 
         file.AddVar(update, "update", "Update");
         file.AddTotal(node1, "prey_seen", "Total Prey Seen by Predators");
@@ -687,6 +713,7 @@ public:
         file.AddVar(vision_size, "predator_vision", "Vision size");
         file.AddVar(vision_height, "predator_vision_height", "Vision height");
         file.AddVar(vision_width, "predator_vision_width", "Vision width");
+        file.AddMean(node3, "attack_efficiency", "Mean attack efficiency");
 
         file.PrintHeaderKeys();
 
