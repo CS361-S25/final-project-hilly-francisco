@@ -36,7 +36,7 @@ class OrgWorld : public emp::World<Organism>
 public:
     int grid_w_boxes = 40;
     int grid_h_boxes = 40;
-    float camouflage_value = 0.1;
+    //float camouflage_value = 0.1;
     int total_prey_start = 100;
     int step_counter = 0;
 
@@ -356,18 +356,22 @@ public:
             KFC *prey_ptr = dynamic_cast<KFC *>(org_ptr.Raw());
 
             // Camouflage roll:
-            if (random.GetDouble() < prey_ptr->getCamouflageVlaue())
-            {
-                // successful camouflage → reward
-                // std::cout << "hid succesfully adding pts to camo value" << std::endl;
-                prey_ptr->addCamouflage(camouflage_value);
-            }
-            else
-            {
-                // failed camouflage → mark and queue for attack
-                prey_ptr->setSpotted(true);
-                spottedPrey.push_back(spot);
-            }
+            // if (random.GetDouble() < prey_ptr->getCamouflageVlaue())
+            // {
+            //     // successful camouflage → reward
+            //     // std::cout << "hid succesfully adding pts to camo value" << std::endl;
+            //     prey_ptr->addCamouflage(camouflage_value);
+            // }
+            // else
+            // {
+            //     // failed camouflage → mark and queue for attack
+            //     prey_ptr->setSpotted(true);
+            //     spottedPrey.push_back(spot);
+            // }
+
+            // No camo
+            prey_ptr->setSpotted(true);
+            spottedPrey.push_back(spot);
         }
 
         // Now attack only those prey that actually failed their camouflage check
