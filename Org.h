@@ -8,12 +8,16 @@ class Organism {
     public:
     double points;
     bool hasEaten = false;
-    double fitness;
+    double fitness = 0.0;
 
     emp::Ptr<emp::Random> random;
 
-    Organism(emp::Ptr<emp::Random> _random, double _points=0.0, double fitness = 0.0) :
+    Organism(emp::Ptr<emp::Random> _random, double _points=0.0) :
         points(_points), random(_random) {;}
+
+    void AddToFitness(double value) { fitness += value; }
+    double GetFitness() const { return fitness; }
+    void ResetFitness() { fitness = 0.0; }
 
     void SetPoints(double _in) {points = _in;}
     void AddPoints(double _in) {points += _in;}

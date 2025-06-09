@@ -36,6 +36,9 @@ class OrgWorld : public emp::World<Organism>
 public:
     int grid_w_boxes = 40;
     int grid_h_boxes = 40;
+    float camouflage_value = 0.1;
+    int total_prey_start = 100;
+    int step_counter = 0;
 
     // grab org at population index
     const pop_t &GetPopulation() { return pop; }
@@ -53,6 +56,7 @@ public:
 
     void Update()
     {
+        step_counter++;
 
         double pointsPerUpdate = 0;
 
@@ -90,31 +94,34 @@ public:
             }
         }
 
-        // Checks conditions for reproduction and lets organisms move
-        // NO REPRODUCTION RN
-        // for (int i : schedule2)
-        // {
-        //     if (IsOccupied(i))
-        //     {
-        //         if (pop[i]->SpeciesName() != "Predator")
-        //         {
-        //             // std::cout << "Called: " << pop[i]->SpeciesName() << std::endl;
-        //             emp::Ptr<Organism> offspring = pop[i]->CheckReproduction();
+        // Calc fitness for each organism
+        int alive_prey = getCountAlivePrey();
 
-        //             // If offspring is made, place into non-empty box
-        //             if (offspring)
-        //             {
-        //                 PlaceOffspring(offspring, i);
-        //             }
-        //         }
+        for (int cellSpot : schedule1)
+        {
+            if (!IsOccupied(cellSpot))
+            {
+                continue;
+            }
 
-        //         // Move non-grass organisms to random neighboring position, if occupied check if can be eaten
-        //         if (pop[i]->SpeciesName() != "Predator")
-        //         {
-        //             MoveOrg(i);
-        //         }
-        //     }
-        // }
+            const auto name = pop[cellSpot]->SpeciesName();
+
+            if (name == "Predator")
+            {
+                emp::Ptr<Organism> org_ptr = pop[cellSpot];
+                Predator *pred_ptr = dynamic_cast<Predator *>(org_ptr.Raw());
+
+                pred_ptr->AddToFitness(total_prey_start - alive_prey);
+            }
+
+            else if (name == "KFC")
+            {
+                emp::Ptr<Organism> org_ptr = pop[cellSpot];
+                KFC *prey_ptr = dynamic_cast<KFC *>(org_ptr.Raw());
+
+                prey_ptr->AddToFitness(alive_prey);
+            }
+        }
     }
 
     void HandlePredator(int cellSpot)
@@ -302,15 +309,10 @@ public:
         {
             AddOrgAt(extracted_org, newPosition);
         }
-
         else
         {
-            bool wasEaten = EatSpecies(extracted_org, newPosition.GetIndex());
-
-            if (!wasEaten)
-            {
-                AddOrgAt(extracted_org, pos);
-            }
+            // collisions don’t trigger eating any more—just stay
+            AddOrgAt(extracted_org, pos);
         }
     }
 
@@ -340,10 +342,38 @@ public:
         // Fill in visiblespots with function call
         visibleSpots = getVisibleArea(cellSpot, visibleSpots, heightOfVision, widthOfVision, &highlighted_cells);
 
-        // Give visible spots to necessary functions
-        getVisibleOrganismCount(visibleSpots);
+        // Get all prey in sight
+        emp::vector<size_t> preyinVision = getPreyInVsion(visibleSpots);
+
+        // Build a new list of _actually_ spotted prey
+        emp::vector<size_t> spottedPrey;
+        spottedPrey.reserve(preyinVision.size());
+
+        for (size_t spot : preyinVision)
+        {
+
+            emp::Ptr<Organism> org_ptr = pop[spot];
+            KFC *prey_ptr = dynamic_cast<KFC *>(org_ptr.Raw());
+
+            // Camouflage roll:
+            if (random.GetDouble() < prey_ptr->getCamouflageVlaue())
+            {
+                // successful camouflage → reward
+                // std::cout << "hid succesfully adding pts to camo value" << std::endl;
+                prey_ptr->addCamouflage(camouflage_value);
+            }
+            else
+            {
+                // failed camouflage → mark and queue for attack
+                prey_ptr->setSpotted(true);
+                spottedPrey.push_back(spot);
+            }
+        }
+
+        // Now attack only those prey that actually failed their camouflage check
+        float attackChance = getAttackChance(spottedPrey.size());
         emp::vector<size_t> attackSpots = checkAttackRange(cellSpot);
-        Attack(visibleSpots, pop[cellSpot], attackSpots);
+        Attack(spottedPrey, pop[cellSpot], attackSpots);
     }
 
     emp::vector<size_t> checkAttackRange(int cellSpot)
@@ -429,11 +459,51 @@ public:
     }
 
     // Predator-only attack function
-    void Attack(const emp::vector<size_t> &visibleSpots, emp::Ptr<Organism> organism, emp::vector<size_t> attackSpots)
+    void Attack(const emp::vector<size_t> &visibleSpots,
+                emp::Ptr<Organism> org_ptr,
+                const emp::vector<size_t> & /*attackSpots—no longer needed*/)
+    {
+        // 1) Only predators can attack
+        Predator *pred = dynamic_cast<Predator *>(org_ptr.Raw());
+        if (!pred)
+            return;
+
+        // 2) Handling‐time cooldown
+        if (!pred->CanAttack(step_counter))
+            return;
+
+        // 3) Build list of attackable prey
+        emp::vector<size_t> targets = getSpottedPrey(getPreyInVsion(visibleSpots));
+        if (targets.empty())
+        {
+            // No prey to hit, but we still incur the attempt delay
+            pred->NoteAttack(step_counter);
+            return;
+        }
+
+        // 4) Do the probability roll exactly as before
+        int idx = random.GetInt((int)targets.size());
+        float attackChance = getAttackChance((int)targets.size());
+        if (random.GetDouble() < attackChance)
+        {
+            EatSpecies(org_ptr, targets[idx]);
+        }
+        else
+        {
+            std::cout << "Attack failed due to probability.\n";
+        }
+
+        // 5) Start the handling‐time clock now
+        pred->NoteAttack(step_counter);
+    }
+
+    // Get prey in predator vision
+    emp::vector<size_t> getPreyInVsion(emp::vector<size_t> visibleArea)
     {
         emp::vector<size_t> targets;
+
         // Get spots with prey in them
-        for (size_t spot : attackSpots)
+        for (size_t spot : visibleArea)
         {
             if (IsOccupied(spot))
             {
@@ -441,24 +511,32 @@ public:
             }
         }
 
-        // If at least one prey in attack range
-        if (!targets.empty())
-        {
-            float attackChance = getAttackChance(targets.size());
-            attack_efficiency = attackChance;
+        return targets;
+    }
 
-            if (random.GetDouble() < attackChance)
+    // Get spotted prey (that failed camo check)
+    emp::vector<size_t> getSpottedPrey(emp::vector<size_t> preyInVision)
+    {
+        emp::vector<size_t> targets;
+
+        // Get spots with prey in them
+        for (size_t spot : preyInVision)
+        {
+            if (IsOccupied(spot))
             {
-                int chosen = random.GetInt(targets.size());
-                // std::cout << "Deleting organism at: " << targets[chosen] << std::endl;
-                EatSpecies(organism, targets[chosen]);
-            }
-            else
-            {
-                // Attack failed due to probability check
-                // std::cout << "Attack failed due to probability." << std::endl;
+                emp::Ptr<Organism> org_ptr = pop[spot];
+                KFC *prey_ptr = dynamic_cast<KFC *>(org_ptr.Raw());
+
+                if (!prey_ptr->checkCamo())
+                {
+                    // std::cout << "prey failed camo test" << std::endl;
+                    targets.push_back(spot);
+                }
+                // else nothing
             }
         }
+
+        return targets;
     }
 
     // Predator Confusion Mechanism
@@ -554,10 +632,6 @@ public:
                 AddOrgAt(org, new_index);
                 return;
             }
-            else if (EatSpecies(pop[predator_index], new_index))
-            {
-                return;
-            }
         }
 
         // fallback: no move
@@ -651,14 +725,35 @@ public:
         return best_spot;
     }
 
-    // Everything for gathering data
-
-    int GetPreySize()
+    // Count how many prey are alive
+    int getCountAlivePrey()
     {
-        int pop_size = GetPopulation().size();
-        return pop_size - 1;
+        int count = 0;
+        for (size_t i = 0; i < pop.size(); ++i)
+        {
+            if (IsOccupied(i) && pop[i]->SpeciesName() == "KFC")
+            {
+                ++count;
+            }
+        }
+        return count;
     }
 
+    int getPredatorFitness()
+    {
+        float predFitness = 0;
+        for (size_t i = 0; i < pop.size(); ++i)
+        {
+            if (IsOccupied(i) && pop[i]->SpeciesName() == "Predator")
+            {
+                emp::Ptr<Organism> org_ptr = pop[i];
+                Predator *pred_ptr = dynamic_cast<Predator *>(org_ptr.Raw());
+
+                predFitness = pred_ptr->GetFitness();
+            }
+        }
+        return predFitness;
+    }
     emp::DataMonitor<int> &GetOrgPreyConsumedDataNode()
     {
         if (!data_prey_consumed)
@@ -720,4 +815,5 @@ public:
         return file;
     }
 };
+
 #endif

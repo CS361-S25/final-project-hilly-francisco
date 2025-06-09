@@ -22,11 +22,21 @@ public:
     // Must be pos and odd (clean pyramids that way)
     int widthOfVision = 5;
 
+    int last_attack_step = -1000;    // initialized so first attack is always allowed
+    static constexpr int HANDLING_TIME = 10;
+
     Predator(emp::Ptr<emp::Random> _random, double _points = 0.0, int _heightOfVision = 3, int _widthOfVision = 5)
         : Organism(_random, _points),
           heightOfVision(_heightOfVision),
           widthOfVision(_widthOfVision) {}
 
+    bool CanAttack(int current_step) const {
+        return (current_step - last_attack_step) >= HANDLING_TIME;
+    }
+    
+    void NoteAttack(int current_step) {
+        last_attack_step = current_step;
+    }
     /*
         Input: Void
         Output: std::string
