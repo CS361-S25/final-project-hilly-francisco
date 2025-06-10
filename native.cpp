@@ -33,8 +33,8 @@ void CreateandAddPredator(emp::Random &ran, int num)
 {
     for (int i = 0; i < num; i++)
     {
-        int randomWidthVision = 9;
-        int randomHeightVision = 5;
+        int randomWidthVision = 1 + 2 * ran.GetInt(1,13);
+        int randomHeightVision = ran.GetInt(1,10);
         Predator *Predator_org = new Predator(&ran, 800, randomHeightVision, randomWidthVision);
         world->AddOrgAt(Predator_org, 152);
         // 152 for grid size of 20 x 20
@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
 
     CreateandAddKFC(*random_ptr, config.PREY_POP_SIZE());
     CreateandAddPredator(*random_ptr, config.PRED_POP_SIZE());
-    for (int update = 0; update < 500; update++)
+    for (int update = 0; update < 155; update++)
     {
         world->Update();
         world->getPredatorFitness();
