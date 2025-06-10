@@ -1,7 +1,8 @@
 Team Members:
+Artificial Life and Digital Evolution
 
 - Francisco Arenas
 - Hilly Gangolf
 
-I love big sandwiches and I cannot lie
-I love big popsicles
+For our final project we replicated a peer reviewed paper for artificail ecologies
+A predator organism follows prey organism around the toroidal grid trying to eat as many as possible and are measure on their fitness of the task
