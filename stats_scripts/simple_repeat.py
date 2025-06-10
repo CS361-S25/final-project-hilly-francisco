@@ -1,7 +1,7 @@
 #a script to run several replicates of several treatments locally
 
 directory = "Example/"
-seeds = range(10, 21)
+seeds = range(0, 10)
 
 import subprocess
 
