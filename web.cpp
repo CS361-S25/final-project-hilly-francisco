@@ -87,12 +87,12 @@ public:
         status_div.Clear();
 
         // 2) Update status every frame
-        status_div << "Simulation Count: " << sim_count << "<br>";
+        status_div << "<b>Simulation Count: </b>" << sim_count << "<br>";
 
         // 3) Sample & display fitness once every 500 steps
         if (sim_count > 0 && sim_count % 500 == 0) {
             double fit = world->getPredatorFitness();
-            fitness_div << "Predator Fitness of previous predator (for 500 steps): " << fit;
+            fitness_div << "<b>Predator Fitness of previous predator (for 500 steps): </b>" << fit;
             last_fit = fit;
             prev_fit = true;
 
@@ -107,11 +107,11 @@ public:
         else {
             // optional placeholder on other frames
             if (!prev_fit){
-                fitness_div << "Predator Fitness (last 500): —";
+                fitness_div << " <b>Predator Fitness (last 500): — </b>";
             }
 
             else{
-                fitness_div << "Last Predator Fitness (last 500): " << last_fit;
+                fitness_div << "</b>Last Predator Fitness (last 500): </b>" << last_fit;
             }
         }
 
@@ -282,11 +282,12 @@ public:
         doc << "<strong> Predator Confusion Mechanism </strong>: A predator's liklihood of successfully hunting prey is determined by the number of prey they can see. The more prey in it's field of view, results in a lower successful attack chance. <br>"
                "<b> Broader vision suited for dispersal </b>: With the PCM in mind, broader predator vision results in dispersal prey behavior being best for prey survival.<br>"
                "<strong> Narrow vision suited for swarming </strong>: In turn, narrow predator vision gives leeway to swarming behavior among prey for better survivability. <br>"
-               "<b> Fitness: </b> Fitness here, as in the original research paper, is the sum, over each of the 500 simulation steps, of the number of prey killed at that step. So we’re effectively adding up a handful of prey-per-step counts 500 times—hence totals in the tens of thousands.";
+               "<b> Fitness: </b> Fitness here, as in the original research paper, is the sum, over each of the 500 simulation steps, of the number of prey killed at that step. So we’re effectively adding up a handful of prey-per-step counts 500 times—hence totals in the tens of thousands."
+               "<b> the higher the number, the better the hunting.</b>";
 
         doc << "<h2> Expansion (Camouflage): </h2>";
         doc << "<strong> Prey Camouflage </strong>: As an expansion to the paper, prey are given an extra mechanism. They can camouflage!<br>"
-               "<strong> Explation </strong>If a Prey is inside the predator's field of range, it has an inherent capability to possibly hide from the predator. A succesful hide results in it not being a candidate for hunting."
+               "<strong> Explanation </strong>If a Prey is inside the predator's field of range, it has an inherent capability to possibly hide from the predator. A succesful hide results in it not being a candidate for hunting."
                "The more a prey hides from a predator, the better it's camouflaging ability gets! <br>"
                "<b> GUI Representation: </b> As prey get better at hiding, they get more transparent. It is easier to see if you step through! <br>";
     };
