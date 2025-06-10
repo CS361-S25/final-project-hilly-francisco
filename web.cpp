@@ -17,6 +17,8 @@
 
 emp::web::Document doc{"target"};
 emp::web::Document settings("settings");
+emp::web::Div status_div{"status"};
+emp::web::Div fitness_div{"fitness"};
 MyConfigType config;
 
 // // Create random generator and world
@@ -41,6 +43,9 @@ class AEAnimator : public emp::web::Animate
     // const int num_of_Predator = 1;
 
     emp::web::Canvas canvas{width, height, "canvas"};
+
+    bool prev_fit = false;
+    double last_fit = 0;
 
 public:
     AEAnimator()
@@ -75,24 +80,45 @@ public:
     void DoFrame() override
     {
 
-        // Every 500 stepps we get a new prey
-        if (sim_count % 500 == 0)
-        {   
-            world->step_counter = 0;
-            float predFitness = world->getPredatorFitness();
-            std::cout << "Here is the predators fitness ->" << predFitness << std::endl;
-            world->Reset();
+        sim_count++;
 
+        // 1) Always clear first
+        fitness_div.Clear();
+        status_div.Clear();
+
+        // 2) Update status every frame
+        status_div << "Simulation Count: " << sim_count << "<br>";
+
+        // 3) Sample & display fitness once every 500 steps
+        if (sim_count > 0 && sim_count % 500 == 0) {
+            double fit = world->getPredatorFitness();
+            fitness_div << "Predator Fitness of previous predator (for 500 steps): " << fit;
+            last_fit = fit;
+            prev_fit = true;
+
+            // then do your reset & repopulate
+            world->step_counter = 0;
+            world->Reset();
             world->SetPopStruct_Grid(num_w_boxes, num_h_boxes);
             world->Resize(num_h_boxes, num_w_boxes);
-
             CreateandAddKFC(*random, config.PREY_POP_SIZE());
-            CreateandAddPredator(*random, config.PRED_POP_SIZE());
+            CreateandAddPredator(*random, 1);
         }
+        else {
+            // optional placeholder on other frames
+            if (!prev_fit){
+                fitness_div << "Predator Fitness (last 500): —";
+            }
+
+            else{
+                fitness_div << "Last Predator Fitness (last 500): " << last_fit;
+            }
+        }
+
+        // 4) Step & draw
         canvas.Clear();
         world->Update();
         DrawSquares();
-        sim_count += 1;
     }
 
     /*
@@ -110,9 +136,17 @@ public:
                 if (world->IsOccupied(org_num))
                 {
                     std::string species = world->GetPopulation()[org_num]->SpeciesName();
-                    if (species == "KFC")
-                    {
-                        canvas.Rect(x * RECT_SIDE, y * RECT_SIDE, RECT_SIDE, RECT_SIDE, "blue", "black");
+
+                    if (species == "KFC") {
+                        KFC *prey_ptr = dynamic_cast<KFC*>( world->GetPopulation()[org_num].Raw() );
+                        float camo = prey_ptr->getCamouflageValue();     // [0,1]
+                        float opacity = 1.0f - std::clamp(camo, 0.0f, 1.0f);
+
+                        std::ostringstream ss;
+                        ss << "rgba(0, 0, 255, " << opacity << ")";
+
+                        canvas.Rect(x * RECT_SIDE, y * RECT_SIDE, RECT_SIDE, RECT_SIDE,
+                                    ss.str(), "black");
                     }
                     if (species == "Predator")
                     {
@@ -232,24 +266,29 @@ public:
 
     void InsertText()
     {
-        doc << canvas;
+        doc << canvas
+        << status_div;
+        doc << fitness_div;
         doc << GetToggleButton("Toggle");
         doc << GetStepButton("Step");
 
-        doc << "<h2> Current Status </h2>"
-               "In the config, only prey population & seed work! "
-               "Some more text. <br>";
-
         doc << "<h2> Simulation </h2>"
-               "This Simulation attempts to show the co-evolution of predator and prey organisms' behavior and morphology. "
+               "This Simulation attempts to replicate a research paper exploring the co-evolution of predator and prey organisms' behavior and morphology. "
                "Predators are given a set range of visible area they can see determined by given vision width and height. "
                "Prey in return move around the grid in two distinct styles, swarming and dispersal."
                " <br>";
 
         doc << "<h2> Results: </h2>";
         doc << "<strong> Predator Confusion Mechanism </strong>: A predator's liklihood of successfully hunting prey is determined by the number of prey they can see. The more prey in it's field of view, results in a lower successful attack chance. <br>"
-               "<b> Narrow vision leads to dispersal </b>: With the PCM in mind, narrow predator vision results in dispersal prey behavior being best for prey survival.<br>"
-               "<strong> Broader vision leads to swarming </strong>: In turn, broader predator vision gives leeway to swarming behavior among prey for better survivability. <br>";
+               "<b> Broader vision suited for dispersal </b>: With the PCM in mind, broader predator vision results in dispersal prey behavior being best for prey survival.<br>"
+               "<strong> Narrow vision suited for swarming </strong>: In turn, narrow predator vision gives leeway to swarming behavior among prey for better survivability. <br>"
+               "<b> Fitness: </b> Fitness here, as in the original research paper, is the sum, over each of the 500 simulation steps, of the number of prey killed at that step. So we’re effectively adding up a handful of prey-per-step counts 500 times—hence totals in the tens of thousands.";
+
+        doc << "<h2> Expansion (Camouflage): </h2>";
+        doc << "<strong> Prey Camouflage </strong>: As an expansion to the paper, prey are given an extra mechanism. They can camouflage!<br>"
+               "<strong> Explation </strong>If a Prey is inside the predator's field of range, it has an inherent capability to possibly hide from the predator. A succesful hide results in it not being a candidate for hunting."
+               "The more a prey hides from a predator, the better it's camouflaging ability gets! <br>"
+               "<b> GUI Representation: </b> As prey get better at hiding, they get more transparent. It is easier to see if you step through! <br>";
     };
 };
 

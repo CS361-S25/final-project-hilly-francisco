@@ -24,7 +24,7 @@ public:
     void setSpotted(bool spotted){spotted = spotted;}
     void addCamouflage(float camo){camouflage_value += camo;}
     bool checkCamo(){return spotted;}
-    float getCamouflageVlaue() {return camouflage_value;}
+    float getCamouflageValue() {return camouflage_value;}
     
     /*
         Input: Void
